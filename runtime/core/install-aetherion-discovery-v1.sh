@@ -1,0 +1,315 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+ROOT="$HOME/AIFT"
+REG="$ROOT/registry"
+CORE="$ROOT/runtime/core"
+
+mkdir -p "$REG"
+
+echo "========================================"
+echo " Aetherion Discovery Engine v1"
+echo " System Self-Inventory Layer"
+echo "========================================"
+
+
+cat > "$CORE/aetherion-discover" <<'DISCOVER'
+#!/data/data/com.termux/files/usr/bin/bash
+
+ROOT="$HOME/AIFT"
+REG="$ROOT/registry"
+
+SYSTEM="$REG/system-map.json"
+CAP="$REG/capability-graph.json"
+DEP="$REG/dependency-map.json"
+ARCH="$REG/architecture-map.json"
+MISS="$REG/missing-capabilities.json"
+
+
+echo "========================================"
+echo " Aetherion Discovery Engine"
+echo " Scanning System..."
+echo "========================================"
+
+
+python - <<'PY'
+
+import os,json
+
+ROOT=os.path.expanduser("~/AIFT")
+REG=os.path.join(ROOT,"registry")
+
+repos=[]
+
+ignore={
+".git",
+"node_modules",
+".next",
+"dist",
+"build"
+}
+
+
+for item in os.listdir(ROOT):
+
+    path=os.path.join(ROOT,item)
+
+    if not os.path.isdir(path):
+        continue
+
+    if item in ignore:
+        continue
+
+    info={
+        "name":item,
+        "path":path,
+        "files":[],
+        "languages":[],
+        "frameworks":[],
+        "package_managers":[],
+        "capabilities":[]
+    }
+
+
+    for root,dirs,files in os.walk(path):
+
+        dirs[:]=[
+            d for d in dirs
+            if d not in ignore
+        ]
+
+        for f in files:
+
+            rel=os.path.relpath(
+                os.path.join(root,f),
+                path
+            )
+
+            info["files"].append(rel)
+
+
+            if f=="package.json":
+                info["package_managers"].append("npm")
+
+            if f=="go.mod":
+                info["package_managers"].append("go")
+
+            if f=="requirements.txt":
+                info["package_managers"].append("pip")
+
+            if f.endswith(".go"):
+                info["languages"].append("Go")
+
+            if f.endswith(".py"):
+                info["languages"].append("Python")
+
+            if f.endswith(".js") or f.endswith(".ts"):
+                info["languages"].append(
+                    "JavaScript/TypeScript"
+                )
+
+            if f.endswith(".md"):
+                info["capabilities"].append(
+                    "documentation"
+                )
+
+
+    text=" ".join(info["files"]).lower()
+
+
+    capability_rules={
+
+        "code_generation":[
+            "forge",
+            "generator",
+            "template"
+        ],
+
+        "web_application":[
+            "next",
+            "vite",
+            "frontend"
+        ],
+
+        "blockchain":[
+            "coin",
+            "chain",
+            "token"
+        ],
+
+        "documentation":[
+            "book",
+            "doc",
+            "markdown"
+        ],
+
+        "infrastructure":[
+            "docker",
+            "server",
+            "vps"
+        ],
+
+        "automation":[
+            "workflow",
+            "automation"
+        ]
+    }
+
+
+    for cap,words in capability_rules.items():
+
+        if any(w in text for w in words):
+            info["capabilities"].append(cap)
+
+
+    # remove duplicates
+
+    for key in [
+        "languages",
+        "package_managers",
+        "capabilities"
+    ]:
+        info[key]=sorted(list(set(info[key])))
+
+
+    repos.append(info)
+
+
+with open(
+os.path.join(REG,"system-map.json"),
+"w"
+) as f:
+    json.dump(
+        repos,
+        f,
+        indent=2
+    )
+
+
+capabilities={}
+
+for repo in repos:
+
+    for c in repo["capabilities"]:
+
+        capabilities.setdefault(
+            c,
+            []
+        ).append(
+            repo["name"]
+        )
+
+
+with open(
+os.path.join(REG,"capability-graph.json"),
+"w"
+) as f:
+    json.dump(
+        capabilities,
+        f,
+        indent=2
+    )
+
+
+dependencies=[]
+
+for repo in repos:
+
+    dependencies.append({
+
+        "repository":repo["name"],
+
+        "dependencies":
+            repo["package_managers"]
+
+    })
+
+
+with open(
+os.path.join(REG,"dependency-map.json"),
+"w"
+) as f:
+    json.dump(
+        dependencies,
+        f,
+        indent=2
+    )
+
+
+architecture={
+
+"repositories":
+len(repos),
+
+"agents":
+"pending",
+
+"capability_graph":
+"generated",
+
+"next_phase":
+"planner"
+
+}
+
+
+with open(
+os.path.join(REG,"architecture-map.json"),
+"w"
+) as f:
+    json.dump(
+        architecture,
+        f,
+        indent=2
+    )
+
+
+missing=[
+
+"multi-agent planner",
+"code synthesis engine",
+"validation engine",
+"deployment orchestration",
+"agent collaboration graph"
+
+]
+
+
+with open(
+os.path.join(REG,"missing-capabilities.json"),
+"w"
+) as f:
+    json.dump(
+        missing,
+        f,
+        indent=2
+    )
+
+
+print()
+print("Discovery Complete")
+print()
+print("Repositories:",len(repos))
+print()
+print("Generated:")
+print("system-map.json")
+print("capability-graph.json")
+print("dependency-map.json")
+print("architecture-map.json")
+print("missing-capabilities.json")
+
+PY
+
+DISCOVER
+
+
+chmod +x "$CORE/aetherion-discover"
+
+
+echo
+echo "========================================"
+echo " Discovery Engine Installed"
+echo
+echo "Run:"
+echo "$CORE/aetherion-discover"
+echo "========================================"
+

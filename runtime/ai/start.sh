@@ -1,0 +1,35 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+set -e
+
+AI_HOME="$HOME/AIFT/runtime/ai"
+LLAMA="$HOME/Aetherion/llama.cpp/build/bin/llama-server"
+MODEL="$AI_HOME/models/aetherion.gguf"
+LOG="$AI_HOME/logs/aetherion.log"
+
+if [ ! -f "$MODEL" ]; then
+    echo "ERROR: Missing model:"
+    echo "$MODEL"
+    exit 1
+fi
+
+echo "Starting optimized Aetherion..."
+
+nohup "$LLAMA" \
+-m "$MODEL" \
+--host 127.0.0.1 \
+--port 8080 \
+--ctx-size 2048 \
+--threads 6 \
+--threads-batch 8 \
+--batch-size 128 \
+--ubatch-size 64 \
+--flash-attn off \
+--mlock \
+> "$LOG" 2>&1 &
+
+echo $! > "$AI_HOME/aetherion.pid"
+
+echo "Aetherion ONLINE"
+echo "PID: $(cat "$AI_HOME/aetherion.pid")"
+echo "API: http://127.0.0.1:8080"

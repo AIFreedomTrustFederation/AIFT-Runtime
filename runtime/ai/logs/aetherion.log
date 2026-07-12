@@ -1,0 +1,8 @@
+0.00.006.382 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.009.685 I srv    load_model: loading model '/data/data/com.termux/files/home/AIFT/runtime/ai/models/aetherion.gguf'
+0.00.863.413 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.04.184.558 W warning: failed to mlock 436240384-byte buffer (after previously locking 0 bytes): Out of memory
+Try increasing RLIMIT_MEMLOCK ('ulimit -l' as root).
+0.11.641.645 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 2048, kv_unified = 'true'
+0.11.671.360 I srv  llama_server: model loaded
+0.11.671.400 I srv  llama_server: listening on http://127.0.0.1:8080

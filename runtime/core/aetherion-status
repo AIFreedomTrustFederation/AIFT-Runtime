@@ -1,0 +1,23 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+ROOT="$HOME/AIFT"
+
+echo "================================"
+echo " Aetherion System Status"
+echo "================================"
+
+echo
+echo "Registry:"
+ls "$ROOT/registry"
+
+echo
+echo "Runtime:"
+ls "$ROOT/runtime"
+
+echo
+echo "Last Route:"
+
+cat "$ROOT/registry/latest-routing.json" 2>/dev/null || echo "No routing yet"
+
+echo
+echo "================================"
