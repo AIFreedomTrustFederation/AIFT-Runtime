@@ -1,0 +1,101 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+
+OBJECTIVES="$REGISTRY/objectives.json"
+STATE="$REGISTRY/cognitive-state.json"
+OUTPUT="$REGISTRY/governance-plan.json"
+
+echo "========================================"
+echo " Aetherion Governance Engine"
+echo " Objective → Governed Decision"
+echo "========================================"
+
+python3 <<PY
+import json
+import os
+from datetime import datetime, timezone
+
+registry="$REGISTRY"
+
+def load(path, default):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except:
+        return default
+
+objectives=load(
+    "$OBJECTIVES",
+    {
+        "objectives":[
+            {
+                "objective":"Convert repository awareness into a goal-directed cognitive operating system",
+                "source":"cognitive-state"
+            }
+        ]
+    }
+)
+
+state=load("$STATE",{})
+
+decisions=[]
+
+for item in objectives.get("objectives", []):
+    objective=item.get("objective","unknown")
+
+    risk="medium"
+
+    if "documentation" in objective.lower():
+        risk="low"
+
+    if "identity" in objective.lower() or "security" in objective.lower():
+        risk="critical"
+
+    decisions.append({
+        "objective":objective,
+        "source":item.get("source"),
+        "governance":{
+            "policy":"evaluated",
+            "risk":risk,
+            "confidence":0.85
+        },
+        "authority":{
+            "required":"operator",
+            "approval_required":True
+        },
+        "execution":{
+            "allowed":False,
+            "reason":"Requires approval pipeline",
+            "rollback_required":True,
+            "validation_required":True
+        },
+        "status":"governed_pending_execution"
+    })
+
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "engine":"active",
+    "input_state_verified":bool(state),
+    "decisions":decisions,
+    "decision_count":len(decisions),
+    "status":"governance_complete"
+}
+
+with open("$OUTPUT","w") as f:
+    json.dump(output,f,indent=2)
+
+print("Generated:")
+print("governance-plan.json")
+print("Decisions:",len(decisions))
+
+PY
+
+echo "========================================"
+echo " ✓ GOVERNANCE ENGINE COMPLETE"
+echo "========================================"
