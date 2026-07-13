@@ -1,0 +1,69 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+INPUT="$REGISTRY/governance-plan.json"
+OUTPUT="$REGISTRY/governance-arbitration.json"
+
+echo "========================================"
+echo " Aetherion Governance Arbitrator"
+echo " Governance Decisions → Execution Order"
+echo "========================================"
+
+python3 <<PY
+import json
+from datetime import datetime, timezone
+
+with open("$INPUT") as f:
+    data=json.load(f)
+
+decisions=data.get("decisions", [])
+
+arbitrated=[]
+
+priority_map={
+    "Create self improvement loop": 1,
+    "Create strategic planning layer": 2
+}
+
+for item in decisions:
+    objective=item.get("objective")
+
+    arbitrated.append({
+        "objective": objective,
+        "priority": priority_map.get(objective, 99),
+        "risk": item.get("governance",{}).get("risk"),
+        "confidence": item.get("governance",{}).get("confidence"),
+        "authority_required": item.get("authority",{}).get("required"),
+        "approval_required": item.get("authority",{}).get("approval_required"),
+        "execution_allowed": item.get("execution",{}).get("allowed"),
+        "rollback_required": item.get("execution",{}).get("rollback_required"),
+        "validation_required": item.get("execution",{}).get("validation_required"),
+        "arbitration_status": "queued_pending_authorization"
+    })
+
+arbitrated.sort(key=lambda x:x["priority"])
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "arbitrator":"active",
+    "input_verified":True,
+    "decision_count":len(arbitrated),
+    "execution_queue":arbitrated,
+    "status":"arbitration_complete"
+}
+
+with open("$OUTPUT","w") as f:
+    json.dump(output,f,indent=2)
+
+print("Generated:")
+print("governance-arbitration.json")
+print("Arbitrated:",len(arbitrated))
+PY
+
+echo "========================================"
+echo " ✓ GOVERNANCE ARBITRATION COMPLETE"
+echo "========================================"
