@@ -50,7 +50,6 @@ policy={
 with open("$POLICY","w") as f:
     json.dump(policy,f,indent=2)
 
-
 decisions=[]
 
 for item in arbitration.get("execution_queue", []):
@@ -62,7 +61,7 @@ for item in arbitration.get("execution_queue", []):
         policy["high"]
     )
 
-    decision={
+    decisions.append({
         "objective":item.get("objective"),
         "priority":item.get("priority"),
         "risk":risk,
@@ -75,10 +74,7 @@ for item in arbitration.get("execution_queue", []):
             "approved_for_autonomous_execution"
             if authority.get("auto_execute")
             else "pending_operator_authorization"
-    }
-
-    decisions.append(decision)
-
+    })
 
 output={
     "identity":{
@@ -91,7 +87,6 @@ output={
     "decision_count":len(decisions),
     "status":"autonomy_classification_complete"
 }
-
 
 with open("$OUTPUT","w") as f:
     json.dump(output,f,indent=2)
