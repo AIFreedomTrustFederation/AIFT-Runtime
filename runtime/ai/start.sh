@@ -2,7 +2,7 @@
 
 set -e
 
-AI_HOME="$HOME/AIFT/runtime/ai"
+AI_HOME="$(cd "$(dirname "$0")" && pwd)"
 LLAMA="$HOME/Aetherion/llama.cpp/build/bin/llama-server"
 MODEL="$AI_HOME/models/aetherion.gguf"
 LOG="$AI_HOME/logs/aetherion.log"
