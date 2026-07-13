@@ -1,0 +1,107 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+
+INPUT="$REGISTRY/governance-arbitration.json"
+POLICY="$REGISTRY/autonomy-policy.json"
+OUTPUT="$REGISTRY/autonomy-decisions.json"
+
+echo "========================================"
+echo " Aetherion Autonomy Policy Engine"
+echo " Risk → Autonomy Decision"
+echo "========================================"
+
+python3 <<PY
+import json
+from datetime import datetime, timezone
+
+with open("$INPUT") as f:
+    arbitration=json.load(f)
+
+policy={
+    "low":{
+        "approval_required":False,
+        "auto_execute":True,
+        "validation_required":True,
+        "rollback_required":True
+    },
+    "medium":{
+        "approval_required":False,
+        "auto_execute":True,
+        "validation_required":True,
+        "rollback_required":True,
+        "notification_required":True
+    },
+    "high":{
+        "approval_required":True,
+        "auto_execute":False,
+        "validation_required":True,
+        "rollback_required":True
+    },
+    "critical":{
+        "approval_required":True,
+        "multi_confirmation":True,
+        "auto_execute":False,
+        "validation_required":True,
+        "rollback_required":True
+    }
+}
+
+with open("$POLICY","w") as f:
+    json.dump(policy,f,indent=2)
+
+
+decisions=[]
+
+for item in arbitration.get("execution_queue", []):
+
+    risk=item.get("risk","medium")
+
+    authority=policy.get(
+        risk,
+        policy["high"]
+    )
+
+    decision={
+        "objective":item.get("objective"),
+        "priority":item.get("priority"),
+        "risk":risk,
+        "autonomy":authority,
+        "decision":
+            "auto_execute"
+            if authority.get("auto_execute")
+            else "requires_authorization",
+        "status":
+            "approved_for_autonomous_execution"
+            if authority.get("auto_execute")
+            else "pending_operator_authorization"
+    }
+
+    decisions.append(decision)
+
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "engine":"autonomy_policy_active",
+    "decisions":decisions,
+    "decision_count":len(decisions),
+    "status":"autonomy_classification_complete"
+}
+
+
+with open("$OUTPUT","w") as f:
+    json.dump(output,f,indent=2)
+
+print("Generated:")
+print("autonomy-decisions.json")
+print("Classified:",len(decisions))
+
+PY
+
+echo "========================================"
+echo " ✓ AUTONOMY POLICY COMPLETE"
+echo "========================================"
