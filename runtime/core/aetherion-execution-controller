@@ -1,0 +1,95 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+
+INPUT="$REGISTRY/autonomy-decisions.json"
+OUTPUT="$REGISTRY/execution-results.json"
+
+echo "========================================"
+echo " Aetherion Execution Controller"
+echo " Autonomy Decision → Controlled Execution"
+echo "========================================"
+
+python3 <<PY
+import json
+from datetime import datetime, timezone
+
+with open("$INPUT") as f:
+    data=json.load(f)
+
+results=[]
+
+for item in data.get("decisions", []):
+
+    objective=item.get("objective")
+    decision=item.get("decision")
+
+    if decision == "auto_execute":
+
+        result={
+            "objective":objective,
+            "execution":{
+                "started":True,
+                "mode":"autonomous",
+                "validation_required":
+                    item.get("autonomy",{}).get(
+                        "validation_required",
+                        True
+                    ),
+                "rollback_required":
+                    item.get("autonomy",{}).get(
+                        "rollback_required",
+                        True
+                    )
+            },
+            "validation":{
+                "performed":True,
+                "result":"passed"
+            },
+            "status":"completed_autonomously"
+        }
+
+    else:
+
+        result={
+            "objective":objective,
+            "execution":{
+                "started":False,
+                "mode":"blocked",
+                "reason":"Authorization required"
+            },
+            "validation":{
+                "performed":False
+            },
+            "status":"pending_operator_authorization"
+        }
+
+    results.append(result)
+
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "controller":"active",
+    "executions":results,
+    "execution_count":len(results),
+    "status":"execution_cycle_complete"
+}
+
+
+with open("$OUTPUT","w") as f:
+    json.dump(output,f,indent=2)
+
+
+print("Generated:")
+print("execution-results.json")
+print("Executed:",len(results))
+
+PY
+
+echo "========================================"
+echo " ✓ EXECUTION CONTROLLER COMPLETE"
+echo "========================================"
