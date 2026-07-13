@@ -10,16 +10,20 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 AI_DIR="$ROOT/runtime/ai"
 MODEL="$AI_DIR/models/aetherion.gguf"
 LLAMA="$HOME/Aetherion/llama.cpp/build/bin/llama-server"
+API="http://127.0.0.1:8080"
 
 PASS=0
 FAIL=0
 
 check() {
-    if eval "$2"; then
-        echo "✓ $1"
+    NAME="$1"
+    COMMAND="$2"
+
+    if eval "$COMMAND"; then
+        echo "✓ $NAME"
         PASS=$((PASS+1))
     else
-        echo "✗ $1"
+        echo "✗ $NAME"
         FAIL=$((FAIL+1))
     fi
 }
@@ -79,7 +83,7 @@ echo "[ Path Configuration ]"
 check "start.sh uses portable path" \
 "grep -q 'dirname.*0' '$AI_DIR/start.sh'"
 
-check "No old AIFT runtime path" \
+check "No old hardcoded AIFT path" \
 "! grep -q 'HOME/AIFT/runtime/ai' '$AI_DIR/start.sh'"
 
 
@@ -91,17 +95,17 @@ check "llama-server exists" \
 
 
 echo
-echo "[ Runtime Process ]"
+echo "[ Runtime ]"
 
-check "Aetherion process running" \
-"pgrep llama-server >/dev/null"
+check "Aetherion API online" \
+"curl -s --max-time 5 '$API/v1/models' | grep -q models"
 
 
 echo
 echo "[ API ]"
 
 check "API responding" \
-"curl -s --max-time 5 http://127.0.0.1:8080 >/dev/null"
+"curl -s --max-time 5 '$API' >/dev/null"
 
 
 echo
