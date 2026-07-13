@@ -1,56 +1,67 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-echo "========================================"
-echo " Aetherion Validation Engine"
-echo " Mapping → Execution Readiness"
-echo "========================================"
-
 REGISTRY="$HOME/AIFT/registry"
 
-INPUT="$REGISTRY/execution-mappings.json"
+INPUT="$REGISTRY/execution-results.json"
 OUTPUT="$REGISTRY/validation-results.json"
-MD="$REGISTRY/validation-results.md"
 
-if [ ! -f "$INPUT" ]; then
-    echo "Missing execution mappings."
-    exit 1
-fi
+echo "========================================"
+echo " Aetherion Validation Engine"
+echo " Execution → Validation"
+echo "========================================"
 
 python3 <<PY
 import json
-from datetime import datetime
-
-registry="$REGISTRY"
+import uuid
+from datetime import datetime, timezone
 
 with open("$INPUT") as f:
-    data=json.load(f)
+    execution=json.load(f)
 
 results=[]
 
-for item in data.get("execution_mappings", []):
+for item in execution.get("executions", []):
 
-    tools=item.get("candidate_tools", [])
+    execution_status=item.get("status","unknown")
 
-    valid_tools=[
-        t for t in tools
-        if "node_modules" not in t.get("path","")
-        and ".git" not in t.get("path","")
-    ]
+    validation={
+        "result":"pending",
+        "confidence":None,
+        "checks":[
+            {
+                "name":"execution_result_present",
+                "status":"passed" if execution_status!="unknown" else "failed"
+            },
+            {
+                "name":"artifact_validation",
+                "status":"pending"
+            },
+            {
+                "name":"runtime_integrity",
+                "status":"pending"
+            }
+        ]
+    }
+
+    rollback_required = execution_status not in (
+        "completed_autonomously",
+        "completed"
+    )
 
     results.append({
-        "objective": item.get("objective"),
-        "action": item.get("action"),
-        "status":"validated",
-        "execution_authority":"governed",
-        "checks":{
-            "snapshot_required":True,
-            "dependency_check":True,
-            "rollback_required":item.get("rollback_required",False),
-            "post_execution_test_required":True,
-            "candidate_tools_found":len(valid_tools),
-            "filtered_invalid_tools":len(tools)-len(valid_tools)
+        "objective":item.get("objective"),
+        "execution_status":execution_status,
+        "validation":validation,
+        "rollback":{
+            "required":rollback_required,
+            "performed":False,
+            "reason":None
         },
-        "execution_candidates":valid_tools[:5]
+        "audit":{
+            "timestamp":datetime.now(timezone.utc).isoformat(),
+            "trace_id":str(uuid.uuid4()),
+            "decision_source":"execution_controller"
+        }
     })
 
 output={
@@ -58,31 +69,21 @@ output={
         "name":"Aetherion",
         "system":"Federated Cognitive Runtime"
     },
-    "timestamp":datetime.utcnow().isoformat()+"Z",
-    "validation_summary":{
-        "validated":len(results),
-        "ready_for_execution":len(results)
-    },
-    "validated_proposals":results,
-    "next_stage":"controlled execution"
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "engine":"validation_active",
+    "results":results,
+    "validation_count":len(results),
+    "status":"validation_cycle_complete"
 }
 
 with open("$OUTPUT","w") as f:
     json.dump(output,f,indent=2)
 
-with open("$MD","w") as f:
-    f.write("# Aetherion Validation Results\n\n")
-    f.write("Status: Ready for controlled execution\n\n")
-    for r in results:
-        f.write("## "+str(r["objective"])+"\n")
-        f.write("- Status: validated\n")
-        f.write("- Rollback: required\n\n")
+print("Generated:")
+print("validation-results.json")
+print("Validated:",len(results))
 PY
 
-echo "Generated:"
-echo "validation-results.json"
-echo "validation-results.md"
-
 echo "========================================"
-echo " ✓ VALIDATION COMPLETE"
+echo " ✓ VALIDATION ENGINE COMPLETE"
 echo "========================================"
