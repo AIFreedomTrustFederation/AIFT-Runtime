@@ -1,0 +1,94 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+ROOT="$HOME/AIFT"
+REG="$ROOT/registry"
+
+echo "========================================"
+echo " Aetherion Cognitive Architecture Audit "
+echo "========================================"
+
+echo
+echo "[ Identity Layer ]"
+
+find "$ROOT" -iname "*mission*" \
+-o -iname "*purpose*" \
+-o -iname "*charter*" \
+-o -iname "*vision*" 2>/dev/null | head -20
+
+
+echo
+echo "[ Knowledge Layer ]"
+
+for f in \
+system-map.json \
+architecture-map.json \
+dependency-map.json \
+capability-graph.json \
+knowledge-graph.json \
+aetherion-knowledge-graph.json
+do
+ if [ -f "$REG/$f" ]; then
+   echo "✓ $f"
+ else
+   echo "✗ $f"
+ fi
+done
+
+
+echo
+echo "[ Memory Layer ]"
+
+for f in \
+aetherion-context.json \
+task-history.json \
+repo-brain.json
+do
+ if [ -f "$REG/$f" ]; then
+   echo "✓ $f"
+ else
+   echo "✗ $f"
+ fi
+done
+
+
+echo
+echo "[ Agent Layer ]"
+
+for f in \
+agent-map.json \
+agent-index.json \
+agent-capability-map.json \
+scored-agents.json
+do
+ if [ -f "$REG/$f" ]; then
+   echo "✓ $f"
+ else
+   echo "✗ $f"
+ fi
+done
+
+
+echo
+echo "[ Strategic Layer ]"
+
+if [ -f "$REG/cognitive-charter.json" ]; then
+ echo "✓ Cognitive Charter exists"
+else
+ echo "✗ Cognitive Charter missing"
+fi
+
+
+echo
+echo "[ Cognitive State ]"
+
+if [ -f "$REG/cognitive-state.json" ]; then
+ echo "✓ Cognitive State exists"
+else
+ echo "✗ Cognitive State missing"
+fi
+
+
+echo
+echo "========================================"
+echo " Audit Complete"
+echo "========================================"

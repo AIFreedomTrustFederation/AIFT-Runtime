@@ -1,0 +1,165 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+echo "========================================"
+echo " Aetherion Proposal Classifier"
+echo " Discovery → Validation → Execution Queue"
+echo "========================================"
+
+BASE="$HOME/AIFT"
+REG="$BASE/registry"
+
+mkdir -p "$REG"
+
+python3 <<'PY'
+
+import os
+import json
+import glob
+from datetime import datetime, timezone
+
+BASE=os.path.expanduser("~/AIFT")
+REG=os.path.join(BASE,"registry")
+
+sources=[]
+
+search_paths=[
+    os.path.join(BASE,"AIFT-Forge",".forge","improvement","proposals"),
+    REG
+]
+
+for root in search_paths:
+    if os.path.exists(root):
+        for path in glob.glob(root+"/**/*",recursive=True):
+            if os.path.isfile(path):
+                if "proposal" in os.path.basename(path).lower() or path.endswith("change-proposals.json"):
+                    sources.append(path)
+
+valid=[]
+rejected=[]
+
+for path in sources:
+
+    try:
+
+        if not path.endswith(".json"):
+            rejected.append({
+                "path":path,
+                "reason":"not_json"
+            })
+            continue
+
+        with open(path) as f:
+            data=json.load(f)
+
+        text=json.dumps(data).lower()
+
+        signals=[
+            "objective",
+            "action",
+            "change",
+            "patch",
+            "improvement",
+            "proposal"
+        ]
+
+        score=sum(1 for x in signals if x in text)
+
+        if score < 2:
+            rejected.append({
+                "path":path,
+                "reason":"insufficient_governance_signal"
+            })
+            continue
+
+
+        objective=data.get(
+            "objective",
+            data.get("name","unknown proposal")
+        )
+
+        action=data.get(
+            "action",
+            data.get(
+                "recommended_action",
+                "requires evaluation"
+            )
+        )
+
+
+        valid.append({
+            "source":path,
+            "objective":objective,
+            "action":action,
+            "classification":"governance_proposal",
+            "status":"awaiting_permission",
+            "checks":[
+                "permission",
+                "dependency_validation",
+                "execution_mapping",
+                "post_execution_evaluation"
+            ]
+        })
+
+
+    except Exception as e:
+
+        rejected.append({
+            "path":path,
+            "reason":str(e)
+        })
+
+
+queue={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+
+    "discovery":{
+        "total_found":len(sources),
+        "accepted":len(valid),
+        "rejected":len(rejected)
+    },
+
+    "execution_candidates":valid,
+
+    "rejected_artifacts":rejected,
+
+    "status":"classified"
+}
+
+
+with open(
+    os.path.join(REG,"execution-queue.json"),
+    "w"
+) as f:
+    json.dump(queue,f,indent=2)
+
+
+with open(
+    os.path.join(REG,"execution-queue.md"),
+    "w"
+) as f:
+
+    f.write("# Aetherion Execution Queue\n\n")
+
+    for item in valid:
+        f.write("## "+str(item["objective"])+"\n")
+        f.write("Action: "+str(item["action"])+"\n\n")
+
+
+print("Generated:")
+print("execution-queue.json")
+print("execution-queue.md")
+print()
+print("Accepted:",len(valid))
+print("Rejected:",len(rejected))
+
+PY
+
+echo "========================================"
+echo " ✓ PROPOSAL CLASSIFICATION COMPLETE"
+echo "========================================"
+

@@ -1,0 +1,86 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+echo "========================================"
+echo " Aetherion Snapshot Manager"
+echo " Pre-Execution State Capture"
+echo "========================================"
+
+REGISTRY="$HOME/AIFT/registry"
+
+python3 <<'PY'
+import os
+import json
+import subprocess
+import datetime
+
+registry=os.path.expanduser("~/AIFT/registry")
+
+repos=[
+    os.path.expanduser("~/AIFT/AIFT-Forge"),
+    os.path.expanduser("~/AIFT/AIFT-OS"),
+    os.path.expanduser("~/AIFT/AIFT-Runtime")
+]
+
+snapshots=[]
+
+for repo in repos:
+    if os.path.exists(repo):
+        try:
+            sha=subprocess.check_output(
+                ["git","-C",repo,"rev-parse","HEAD"],
+                text=True
+            ).strip()
+
+            branch=subprocess.check_output(
+                ["git","-C",repo,"branch","--show-current"],
+                text=True
+            ).strip()
+
+            status=subprocess.check_output(
+                ["git","-C",repo,"status","--short"],
+                text=True
+            ).strip()
+
+            snapshots.append({
+                "repository":repo,
+                "commit":sha,
+                "branch":branch,
+                "working_tree":status,
+                "captured":datetime.datetime.now(
+                    datetime.timezone.utc
+                ).isoformat()
+            })
+
+        except Exception as e:
+            snapshots.append({
+                "repository":repo,
+                "error":str(e)
+            })
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "snapshot_mode":"pre_execution",
+    "timestamp":datetime.datetime.now(
+        datetime.timezone.utc
+    ).isoformat(),
+    "repositories":snapshots,
+    "status":"snapshot_ready"
+}
+
+with open(
+    f"{registry}/execution-snapshots.json",
+    "w"
+) as f:
+    json.dump(output,f,indent=2)
+
+print("Generated:")
+print("execution-snapshots.json")
+print("Repositories captured:",len(snapshots))
+PY
+
+echo "========================================"
+echo " ✓ SNAPSHOT COMPLETE"
+echo "========================================"

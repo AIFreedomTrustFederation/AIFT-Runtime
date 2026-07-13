@@ -1,0 +1,92 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+ROOT="$HOME/AIFT"
+REG="$ROOT/registry"
+
+mkdir -p "$REG"
+
+echo "========================================"
+echo " Aetherion Cognitive Charter Compiler "
+echo "========================================"
+
+
+python - <<'PY'
+
+import os,json,glob
+
+ROOT=os.path.expanduser("~/AIFT")
+REG=os.path.join(ROOT,"registry")
+
+
+sources=[]
+
+patterns=[
+"**/CHARTER*",
+"**/VISION*",
+"**/MISSION*",
+"**/*mission*.json",
+"**/*manifest*.json"
+]
+
+
+for p in patterns:
+    for f in glob.glob(os.path.join(ROOT,p),recursive=True):
+        if "node_modules" not in f and ".git" not in f:
+            sources.append(f)
+
+
+charter={
+"identity":{
+"name":"Aetherion",
+"type":"Federated Cognitive Runtime"
+},
+"sources":sources,
+"mission_sources":[],
+"architecture_sources":[],
+"improvement_sources":[],
+"principles":[],
+"values":[],
+"objectives":[]
+}
+
+
+for s in sources:
+
+    low=s.lower()
+
+    if "mission" in low:
+        charter["mission_sources"].append(s)
+
+    if "charter" in low or "vision" in low:
+        charter["principles"].append(
+            os.path.basename(s)
+        )
+
+    if "manifest" in low:
+        charter["architecture_sources"].append(s)
+
+
+out=os.path.join(REG,"cognitive-charter.json")
+
+with open(out,"w") as f:
+    json.dump(charter,f,indent=2)
+
+
+md=os.path.join(REG,"cognitive-charter.md")
+
+with open(md,"w") as f:
+    f.write("# Aetherion Cognitive Charter\n\n")
+    f.write("## Identity\n\n")
+    f.write("Aetherion - Federated Cognitive Runtime\n\n")
+    f.write("## Sources\n\n")
+
+    for s in sources:
+        f.write("- "+s+"\n")
+
+
+print("Generated:")
+print(out)
+print(md)
+print("Sources:",len(sources))
+
+PY

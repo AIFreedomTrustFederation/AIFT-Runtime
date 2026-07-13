@@ -1,0 +1,89 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+set -e
+
+ROOT="$HOME/AIFT"
+RUNTIME="$ROOT/AIFT-Runtime"
+
+echo "========================================"
+echo " Aetherion Awareness Synchronizer"
+echo "========================================"
+
+echo
+
+echo "[1] Repository Discovery"
+
+"$RUNTIME/runtime/core/aetherion-discover"
+
+echo
+echo "[2] Validating Registry"
+
+REG="$ROOT/registry"
+
+FILES=(
+system-map.json
+capability-graph.json
+dependency-map.json
+architecture-map.json
+repo-brain.json
+repo-intelligence.json
+knowledge-graph.json
+)
+
+FAIL=0
+
+for f in "${FILES[@]}"
+do
+    if [ -f "$REG/$f" ]; then
+        echo "✓ $f"
+    else
+        echo "✗ Missing $f"
+        FAIL=$((FAIL+1))
+    fi
+done
+
+
+echo
+echo "[3] Repository Count"
+
+jq length "$REG/system-map.json"
+
+
+echo
+echo "[4] Capability Count"
+
+jq length "$REG/capability-graph.json"
+
+
+echo
+echo "[5] Router Dependencies"
+
+for f in \
+agent-map.json \
+repo-intelligence.json \
+task-history.json \
+agent-performance.json \
+repo-brain.json \
+knowledge-graph.json
+do
+
+ if [ -f "$REG/$f" ]; then
+    echo "✓ Router dependency: $f"
+ else
+    echo "✗ Router dependency missing: $f"
+    FAIL=$((FAIL+1))
+ fi
+
+done
+
+
+echo
+echo "========================================"
+
+if [ "$FAIL" -eq 0 ]; then
+ echo "✓ AETHERION AWARENESS SYNCHRONIZED"
+ exit 0
+else
+ echo "✗ Awareness synchronization incomplete"
+ exit 1
+fi

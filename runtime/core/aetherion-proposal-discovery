@@ -1,0 +1,55 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+echo "========================================"
+echo " Aetherion Proposal Discovery"
+echo " Finding Execution Inputs"
+echo "========================================"
+
+BASE="$HOME/AIFT"
+REG="$BASE/registry"
+
+python3 <<'PY'
+
+import os,json,glob
+
+BASE=os.path.expanduser("~/AIFT")
+
+matches=[]
+
+for root,dirs,files in os.walk(BASE):
+
+    for f in files:
+
+        if "proposal" in f.lower() or "objective" in f.lower():
+
+            path=os.path.join(root,f)
+
+            try:
+
+                with open(path,errors="ignore") as x:
+                    data=x.read(500)
+
+                    if "objective" in data or "priority" in data:
+                        matches.append(path)
+
+            except:
+                pass
+
+
+print("")
+print("Proposal-like artifacts found:")
+print("")
+
+for m in matches:
+    print("✓",m)
+
+
+print("")
+print("Total:",len(matches))
+
+PY
+
+echo "========================================"
+echo " ✓ DISCOVERY COMPLETE"
+echo "========================================"
+

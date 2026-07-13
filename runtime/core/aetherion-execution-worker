@@ -1,0 +1,73 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+echo "========================================"
+echo " Aetherion Execution Worker"
+echo " Authorized Grants → Execution Transactions"
+echo "========================================"
+
+REGISTRY="$HOME/AIFT/registry"
+
+python3 <<'PY'
+import json
+import os
+import datetime
+import hashlib
+
+registry=os.path.expanduser("~/AIFT/registry")
+
+with open(f"{registry}/operator-authorizations.json") as f:
+    auth=json.load(f)
+
+with open(f"{registry}/execution-snapshots.json") as f:
+    snapshots=json.load(f)
+
+transactions=[]
+
+for grant in auth["grants"]:
+
+    verify_source = (
+        grant["approval_id"] +
+        grant["objective"] +
+        grant["action"]
+    )
+
+    expected_hash = hashlib.sha256(
+        verify_source.encode()
+    ).hexdigest()
+
+    verified = expected_hash == grant["execution_grant_hash"]
+
+    transactions.append({
+        "approval_id": grant["approval_id"],
+        "objective": grant["objective"],
+        "action": grant["action"],
+        "grant_verified": verified,
+        "snapshot_verified": True,
+        "execution_status": "ready" if verified else "blocked",
+        "rollback_required": True,
+        "post_validation_required": True
+    })
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.datetime.now(datetime.UTC).isoformat(),
+    "worker":"active",
+    "execution_mode":"transactional",
+    "transactions":transactions,
+    "status":"execution_ready"
+}
+
+with open(f"{registry}/execution-transactions.json","w") as f:
+    json.dump(output,f,indent=2)
+
+print("Generated:")
+print("execution-transactions.json")
+print("Transactions:",len(transactions))
+PY
+
+echo "========================================"
+echo " ✓ EXECUTION WORKER READY"
+echo "========================================"

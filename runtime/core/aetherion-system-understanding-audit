@@ -1,0 +1,149 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+ROOT="$HOME/AIFT"
+REG="$ROOT/registry"
+RUNTIME="$ROOT/AIFT-Runtime"
+
+echo "========================================"
+echo " Aetherion System Understanding Audit"
+echo "========================================"
+
+
+echo
+echo "[ SYSTEM IDENTITY ]"
+
+echo "Workspace:"
+echo "$ROOT"
+
+echo "Runtime:"
+echo "$RUNTIME"
+
+
+echo
+echo "[ REPOSITORY FEDERATION ]"
+
+REPOS=$(find "$ROOT" -maxdepth 2 -type d -name .git | wc -l)
+
+echo "Git repositories:"
+echo "$REPOS"
+
+
+echo
+echo "[ DISCOVERY LAYER ]"
+
+for f in \
+system-map.json \
+architecture-map.json \
+dependency-map.json \
+capability-graph.json \
+missing-capabilities.json
+do
+
+if [ -f "$REG/$f" ]; then
+ echo "✓ $f"
+else
+ echo "✗ Missing $f"
+fi
+
+done
+
+
+if [ -f "$REG/system-map.json" ]; then
+ echo
+ echo "Known repositories:"
+ jq -r '.[].name' "$REG/system-map.json"
+fi
+
+
+echo
+echo "[ KNOWLEDGE LAYER ]"
+
+for f in \
+repo-brain.json \
+repo-intelligence.json \
+knowledge-graph.json \
+aetherion-knowledge-graph.json \
+universal-symbol-graph.json
+do
+
+if [ -f "$REG/$f" ]; then
+ SIZE=$(du -h "$REG/$f" | awk '{print $1}')
+ echo "✓ $f ($SIZE)"
+else
+ echo "✗ $f"
+fi
+
+done
+
+
+echo
+echo "[ AGENT INTELLIGENCE ]"
+
+for f in \
+agent-map.json \
+agent-index.json \
+agent-capability-map.json \
+discovered-agents.json \
+scored-agents.json
+do
+
+if [ -f "$REG/$f" ]; then
+ echo "✓ $f"
+else
+ echo "✗ $f"
+fi
+
+done
+
+
+echo
+echo "[ ROUTER ARCHITECTURE ]"
+
+grep -R "repo-intelligence" \
+"$RUNTIME/runtime/core" \
+2>/dev/null | head -5
+
+grep -R "knowledge-graph" \
+"$RUNTIME/runtime/core" \
+2>/dev/null | head -5
+
+
+echo
+echo "[ AETHERION PIPELINE ]"
+
+cat <<EOF
+
+Repository Discovery
+        |
+        v
+System Maps
+        |
+        v
+Knowledge Graphs
+        |
+        v
+Agent Intelligence
+        |
+        v
+Executive Router
+        |
+        v
+Runtime Execution
+
+EOF
+
+
+echo
+echo "[ LIVE MODEL ]"
+
+curl -s \
+--max-time 5 \
+http://127.0.0.1:8080/v1/models \
+| jq '.data[].id' 2>/dev/null \
+|| echo "API offline"
+
+
+echo
+echo "========================================"
+echo " END AUDIT"
+echo "========================================"

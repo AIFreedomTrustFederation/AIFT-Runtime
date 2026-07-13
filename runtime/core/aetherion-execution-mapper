@@ -1,0 +1,223 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+echo "========================================"
+echo " Aetherion Execution Mapper"
+echo " Permission → Capability Mapping"
+echo "========================================"
+
+BASE="$HOME/AIFT"
+REG="$BASE/registry"
+
+python3 <<'PY'
+
+import os
+import json
+import glob
+from datetime import datetime, timezone
+
+
+REG=os.path.expanduser("~/AIFT/registry")
+
+
+with open(
+    os.path.join(REG,"permission-decisions.json")
+) as f:
+    permissions=json.load(f)
+
+
+tools=[]
+
+search_roots=[
+    os.path.expanduser("~/AIFT/AIFT-Forge"),
+    os.path.expanduser("~/AIFT/AIFT-Runtime/runtime/core")
+]
+
+
+keywords={
+    "complexity":[
+        "refactor",
+        "patch",
+        "repair",
+        "improve"
+    ],
+
+    "todo":[
+        "todo",
+        "task",
+        "workflow"
+    ],
+
+    "documentation":[
+        "docs",
+        "readme",
+        "documentation"
+    ],
+
+    "duplication":[
+        "analyze",
+        "refactor",
+        "patch"
+    ]
+}
+
+
+for root in search_roots:
+
+    if os.path.exists(root):
+
+        for path in glob.glob(
+            root+"/**/*",
+            recursive=True
+        ):
+
+            if os.path.isfile(path):
+
+                name=os.path.basename(path).lower()
+
+                caps=[]
+
+                for cap,terms in keywords.items():
+
+                    if any(t in name for t in terms):
+                        caps.append(cap)
+
+
+                if caps:
+
+                    tools.append({
+                        "tool":os.path.basename(path),
+                        "path":path,
+                        "capabilities":caps
+                    })
+
+
+mappings=[]
+
+
+for proposal in permissions["approved_proposals"]:
+
+    objective=proposal["objective"].lower()
+
+    matches=[]
+
+
+    for tool in tools:
+
+        if any(
+            x in objective
+            for x in tool["capabilities"]
+        ):
+
+            matches.append(tool)
+
+
+    mappings.append({
+
+        "objective":
+            proposal["objective"],
+
+        "action":
+            proposal["action"],
+
+        "execution_mode":
+            "governed",
+
+        "candidate_tools":
+            matches[:10],
+
+        "validation_required":[
+            "pre_execution_snapshot",
+            "dependency_check",
+            "post_execution_test"
+        ],
+
+        "rollback_required":
+            True,
+
+        "status":
+            "mapped"
+
+    })
+
+
+output={
+
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+
+    "timestamp":
+        datetime.now(timezone.utc).isoformat(),
+
+    "mapping_summary":{
+        "proposals":
+            len(mappings),
+
+        "tools_discovered":
+            len(tools)
+    },
+
+    "execution_mappings":
+        mappings,
+
+    "next_stage":
+        "validation and controlled execution"
+
+}
+
+
+with open(
+    os.path.join(REG,"execution-mappings.json"),
+    "w"
+) as f:
+
+    json.dump(
+        output,
+        f,
+        indent=2
+    )
+
+
+with open(
+    os.path.join(REG,"execution-mappings.md"),
+    "w"
+) as f:
+
+    f.write("# Aetherion Execution Mappings\n\n")
+
+    for m in mappings:
+
+        f.write(
+            "## "+
+            m["objective"]+
+            "\n"
+        )
+
+        f.write(
+            "Action: "+
+            m["action"]+
+            "\n\n"
+        )
+
+        f.write(
+            "Tools: "+
+            str(len(m["candidate_tools"]))+
+            "\n\n"
+        )
+
+
+print("Generated:")
+print("execution-mappings.json")
+print("execution-mappings.md")
+print()
+print("Mapped proposals:",len(mappings))
+print("Tools discovered:",len(tools))
+
+
+PY
+
+echo "========================================"
+echo " ✓ EXECUTION MAPPING COMPLETE"
+echo "========================================"
+

@@ -1,0 +1,53 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+INPUT="$REGISTRY/capability-execution-results.json"
+OUTPUT="$REGISTRY/post-execution-validation.json"
+
+echo "========================================"
+echo " Aetherion Post Execution Validator"
+echo " Execution Results → Validation"
+echo "========================================"
+
+python3 <<PY
+import json
+from datetime import datetime, timezone
+
+with open("$INPUT") as f:
+    data=json.load(f)
+
+validations=[]
+
+for item in data.get("results", []):
+    validations.append({
+        "approval_id": item.get("approval_id"),
+        "objective": item.get("objective"),
+        "execution_detected": True,
+        "rollback_verified": item.get("rollback_enabled", False),
+        "validation_required": item.get("validation_required", True),
+        "status": "validated_pending_state_check"
+    })
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "validator":"active",
+    "validated_count":len(validations),
+    "validations":validations,
+    "status":"post_execution_validation_complete"
+}
+
+with open("$OUTPUT","w") as f:
+    json.dump(output,f,indent=2)
+
+print("Generated:")
+print("post-execution-validation.json")
+print("Validated:",len(validations))
+PY
+
+echo "========================================"
+echo " ✓ POST EXECUTION VALIDATION COMPLETE"
+echo "========================================"

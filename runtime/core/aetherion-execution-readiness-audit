@@ -1,0 +1,144 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+ROOT="$HOME/AIFT"
+REG="$ROOT/registry"
+CORE="$ROOT/AIFT-Runtime/runtime/core"
+
+echo "========================================"
+echo " Aetherion Execution Readiness Audit"
+echo " Existing Governance + Execution Layers"
+echo "========================================"
+
+python - <<'PY'
+
+import os,json,glob
+
+ROOT=os.path.expanduser("~/AIFT")
+REG=os.path.join(ROOT,"registry")
+CORE=os.path.join(ROOT,"AIFT-Runtime/runtime/core")
+
+print("\n[ GOVERNANCE ARTIFACTS ]")
+
+files=[
+"cognitive-state.json",
+"objectives.json",
+"evaluation-report.json",
+"strategic-plan.json",
+"improvement-plan.json",
+"task-history.json",
+"repo-brain.json",
+"knowledge-graph.json",
+"aetherion-knowledge-graph.json",
+"agent-map.json",
+"agent-capability-map.json"
+]
+
+for f in files:
+    path=os.path.join(REG,f)
+    if os.path.exists(path):
+        print("✓",f)
+    else:
+        print("✗",f)
+
+
+print("\n[ EXECUTION COMPONENT SEARCH ]")
+
+terms=[
+"execute",
+"execution",
+"executor",
+"patch",
+"apply",
+"deploy",
+"mutation",
+"change",
+"rollback",
+"validation",
+"verify",
+"approval",
+"permission"
+]
+
+matches=[]
+
+for root,dirs,files in os.walk(ROOT):
+    if "node_modules" in root or ".git" in root:
+        continue
+
+    for file in files:
+        if file.endswith((".json",".md",".sh",".py",".js",".ts")):
+            path=os.path.join(root,file)
+
+            try:
+                with open(path,errors="ignore") as f:
+                    text=f.read().lower()
+
+                found=[
+                    t for t in terms
+                    if t in text
+                ]
+
+                if found:
+                    matches.append({
+                        "file":path,
+                        "terms":found[:5]
+                    })
+
+            except:
+                pass
+
+
+for item in matches[:50]:
+    print("\n",item["file"])
+    print("  ",",".join(item["terms"]))
+
+
+print("\n[ CORE TOOLS ]")
+
+for f in sorted(glob.glob(CORE+"/*")):
+    print("✓",os.path.basename(f))
+
+
+print("\n[ EXECUTION ARCHITECTURE STATUS ]")
+
+layers={
+"objective_generation":
+"os.path.exists(os.path.join(REG,'objectives.json'))",
+
+"evaluation":
+"os.path.exists(os.path.join(REG,'evaluation-report.json'))",
+
+"planning":
+"os.path.exists(os.path.join(REG,'strategic-plan.json'))",
+
+"learning":
+"os.path.exists(os.path.join(REG,'improvement-plan.json'))",
+
+"execution_governor":
+"os.path.exists(os.path.join(CORE,'aetherion-execution-governor'))",
+
+"execution_history":
+"os.path.exists(os.path.join(REG,'execution-history.json'))",
+
+"change_proposals":
+"os.path.exists(os.path.join(REG,'change-proposals.json'))",
+
+"rollback_system":
+"False",
+
+"validation_system":
+"False"
+}
+
+for name,check in layers.items():
+    if eval(check):
+        print("✓",name)
+    else:
+        print("✗",name)
+
+
+print("\n========================================")
+print(" Audit Complete")
+print("========================================")
+
+PY

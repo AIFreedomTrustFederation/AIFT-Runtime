@@ -1,0 +1,194 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+ROOT="$HOME/AIFT"
+REG="$ROOT/registry"
+
+STATE="$REG/cognitive-state.json"
+OBJECTIVES="$REG/objectives.json"
+HISTORY="$REG/task-history.json"
+
+OUT="$REG/evaluation-report.json"
+MD="$REG/evaluation-report.md"
+
+echo "========================================"
+echo " Aetherion Cognitive Evaluation Engine"
+echo " Outcome Feedback System"
+echo "========================================"
+
+python - <<'PY'
+
+import os,json
+from datetime import datetime, timezone
+
+ROOT=os.path.expanduser("~/AIFT")
+REG=os.path.join(ROOT,"registry")
+
+state_file=os.path.join(REG,"cognitive-state.json")
+obj_file=os.path.join(REG,"objectives.json")
+history_file=os.path.join(REG,"task-history.json")
+
+with open(state_file) as f:
+    state=json.load(f)
+
+with open(obj_file) as f:
+    objectives=json.load(f)
+
+if os.path.exists(history_file):
+    with open(history_file) as f:
+        history=json.load(f)
+else:
+    history=[]
+
+
+cognitive=state.get("cognitive_state",{})
+
+completed=[
+    k for k,v in cognitive.items()
+    if v is True
+]
+
+missing=[
+    k for k,v in cognitive.items()
+    if v is False
+]
+
+
+evaluations=[]
+
+for obj in objectives.get("objectives",[]):
+
+    score=obj.get("priority",0)
+
+    evaluations.append({
+
+        "objective":
+            obj["objective"],
+
+        "priority":
+            score,
+
+        "evaluation":
+            "requires development",
+
+        "evidence":
+            obj["reason"],
+
+        "success_condition":
+            obj["recommended_action"],
+
+        "status":
+            obj["status"]
+
+    })
+
+
+report={
+
+    "identity":{
+        "name":"Aetherion",
+        "type":"Federated Cognitive Runtime"
+    },
+
+    "timestamp":
+        datetime.now(timezone.utc).isoformat(),
+
+    "cognitive_health":{
+
+        "active_layers":
+            completed,
+
+        "missing_layers":
+            missing,
+
+        "health_score":
+            round(
+                len(completed) /
+                max(len(cognitive),1),
+                3
+            )
+    },
+
+    "evaluation":evaluations,
+
+    "feedback_loop":{
+
+        "history_events":
+            len(history),
+
+        "learning_available":
+            len(history)>0,
+
+        "next_requirement":
+            "Connect outcomes to future objective generation"
+
+    },
+
+    "recommended_evolution":
+
+        "Create strategic planner and improvement loop"
+
+}
+
+
+with open(os.path.join(REG,"evaluation-report.json"),"w") as f:
+    json.dump(report,f,indent=2)
+
+
+with open(os.path.join(REG,"evaluation-report.md"),"w") as f:
+
+    f.write("# Aetherion Cognitive Evaluation\n\n")
+
+    f.write(
+        "## Cognitive Health\n\n"
+    )
+
+    f.write(
+        f"Health Score: {report['cognitive_health']['health_score']}\n\n"
+    )
+
+    f.write(
+        "## Active Layers\n"
+    )
+
+    for x in completed:
+        f.write(f"- {x}\n")
+
+    f.write("\n## Missing Layers\n")
+
+    for x in missing:
+        f.write(f"- {x}\n")
+
+
+    f.write("\n## Objective Evaluation\n")
+
+    for e in evaluations:
+
+        f.write(
+            "\n### "
+            + e["objective"]
+            + "\n"
+        )
+
+        f.write(
+            "Priority: "
+            + str(e["priority"])
+            + "\n"
+        )
+
+        f.write(
+            "Evidence: "
+            + e["evidence"]
+            + "\n"
+        )
+
+
+print("Generated:")
+print("evaluation-report.json")
+print("evaluation-report.md")
+
+PY
+
+
+echo "========================================"
+echo " ✓ COGNITIVE EVALUATION COMPLETE"
+echo "========================================"

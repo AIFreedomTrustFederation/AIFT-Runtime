@@ -1,0 +1,220 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+ROOT="$HOME/AIFT"
+REG="$ROOT/registry"
+
+echo "========================================"
+echo " Aetherion Improvement Loop v2"
+echo " Robust Learning + Evolution"
+echo "========================================"
+
+python - <<'PY'
+
+import os,json
+from datetime import datetime, timezone
+
+REG=os.path.expanduser("~/AIFT/registry")
+
+
+def load(name,default):
+    path=os.path.join(REG,name)
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except:
+        return default
+
+
+evaluation=load(
+    "evaluation-report.json",
+    {}
+)
+
+strategy=load(
+    "strategic-plan.json",
+    {}
+)
+
+history=load(
+    "task-history.json",
+    []
+)
+
+
+lessons=[]
+
+for item in evaluation.get("evaluation",[]):
+
+    objective=item.get(
+        "objective",
+        "unknown objective"
+    )
+
+    reason=item.get(
+        "evidence"
+    )
+
+    if not reason:
+        reason=item.get(
+            "reason",
+            "No evaluation evidence recorded"
+        )
+
+    action=item.get(
+        "success_condition"
+    )
+
+    if not action:
+        action=item.get(
+            "recommended_action",
+            "No recommended action recorded"
+        )
+
+
+    lessons.append({
+
+        "objective":
+            objective,
+
+        "lesson":
+            reason,
+
+        "required_change":
+            action,
+
+        "source":
+            "evaluation"
+
+    })
+
+
+targets=[]
+
+for phase in strategy.get(
+    "strategy",
+    {}
+).get(
+    "phases",
+    []
+):
+
+    targets.append({
+
+        "objective":
+            phase.get(
+                "objective",
+                "unknown"
+            ),
+
+        "priority":
+            phase.get(
+                "priority",
+                0
+            ),
+
+        "action":
+            phase.get(
+                "recommended_action",
+                "none"
+            ),
+
+        "state":
+            "planned"
+
+    })
+
+
+improvement={
+
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+
+    "timestamp":
+        datetime.now(
+            timezone.utc
+        ).isoformat(),
+
+    "learning":{
+
+        "observations":
+            len(history),
+
+        "lessons_created":
+            len(lessons)
+
+    },
+
+    "lessons_learned":
+        lessons,
+
+    "improvement_targets":
+        targets,
+
+    "cycle":{
+
+        "observe":True,
+        "evaluate":True,
+        "learn":True,
+        "adapt":True
+
+    },
+
+    "next_stage":
+        "Connect improvement proposals to governed execution"
+
+}
+
+
+outputs=[
+
+"improvement-plan.json",
+"lessons-learned.json"
+
+]
+
+
+for file in outputs:
+
+    with open(
+        os.path.join(REG,file),
+        "w"
+    ) as f:
+        json.dump(
+            improvement
+            if "plan" in file
+            else lessons,
+            f,
+            indent=2
+        )
+
+
+with open(
+    os.path.join(REG,"improvement-log.json"),
+    "w"
+) as f:
+
+    json.dump(
+        {
+        "timestamp":
+            improvement["timestamp"],
+        "status":
+            "learning_cycle_complete",
+        "lessons":
+            len(lessons)
+        },
+        f,
+        indent=2
+    )
+
+
+print("Improvement cycle rebuilt")
+print("Lessons:",len(lessons))
+print("Targets:",len(targets))
+
+PY
+
+echo "========================================"
+echo " ✓ IMPROVEMENT LOOP v2 COMPLETE"
+echo "========================================"

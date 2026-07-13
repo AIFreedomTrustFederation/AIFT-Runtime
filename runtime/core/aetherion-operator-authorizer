@@ -1,0 +1,68 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+echo "========================================"
+echo " Aetherion Operator Authorizer"
+echo " Governance → Execution Authority"
+echo "========================================"
+
+REGISTRY="$HOME/AIFT/registry"
+
+python3 <<'PY'
+import json
+import os
+import datetime
+import hashlib
+
+registry=os.path.expanduser("~/AIFT/registry")
+
+with open(f"{registry}/execution-governance.json") as f:
+    governance=json.load(f)
+
+authorized=[]
+
+for action in governance["controlled_actions"]:
+    grant_source = (
+        action["approval_id"] +
+        action["objective"] +
+        action["action"]
+    )
+
+    grant_hash = hashlib.sha256(
+        grant_source.encode()
+    ).hexdigest()
+
+    authorized.append({
+        "approval_id": action["approval_id"],
+        "objective": action["objective"],
+        "action": action["action"],
+        "authorization": "operator_approved",
+        "execution_permission": True,
+        "execution_grant_hash": grant_hash,
+        "snapshot_required": True,
+        "rollback_required": True,
+        "post_validation_required": True
+    })
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.datetime.now(datetime.UTC).isoformat(),
+    "authority":"operator_authorized",
+    "authorization_count":len(authorized),
+    "execution_state":"authorized_pending_execution",
+    "grants":authorized
+}
+
+with open(f"{registry}/operator-authorizations.json","w") as f:
+    json.dump(output,f,indent=2)
+
+print("Generated:")
+print("operator-authorizations.json")
+print("Authorized grants:",len(authorized))
+PY
+
+echo "========================================"
+echo " ✓ OPERATOR AUTHORIZATION COMPLETE"
+echo "========================================"

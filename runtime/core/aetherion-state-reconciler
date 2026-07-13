@@ -1,0 +1,130 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+ROOT="$HOME/AIFT"
+REG="$ROOT/registry"
+
+echo "========================================"
+echo " Aetherion Cognitive State Reconciler"
+echo " Runtime Truth Synchronization"
+echo "========================================"
+
+python - <<'PY'
+
+import os,json
+from datetime import datetime, timezone
+
+REG=os.path.expanduser("~/AIFT/registry")
+
+
+def exists(name):
+    return os.path.exists(
+        os.path.join(REG,name)
+    )
+
+
+state_file=os.path.join(
+    REG,
+    "cognitive-state.json"
+)
+
+obj_file=os.path.join(
+    REG,
+    "objectives.json"
+)
+
+
+with open(state_file) as f:
+    state=json.load(f)
+
+
+checks={
+
+"identity":
+    exists("cognitive-charter.json"),
+
+"memory":
+    exists("repo-brain.json")
+    and exists("task-history.json"),
+
+"awareness":
+    exists("system-map.json")
+    and exists("knowledge-graph.json"),
+
+"reasoning":
+    exists("objectives.json"),
+
+"routing":
+    exists("latest-routing.json"),
+
+"execution":
+    exists("execution-plans"),
+
+"evaluation":
+    exists("evaluation-report.json"),
+
+"self_improvement":
+    exists("improvement-plan.json")
+
+}
+
+
+state["cognitive_state"]=checks
+
+
+missing=[
+    k for k,v in checks.items()
+    if not v
+]
+
+
+state["missing_layers"]=missing
+
+
+state["timestamp"]=datetime.now(
+    timezone.utc
+).isoformat()
+
+
+state["reconciliation"]= {
+
+"verified": True,
+
+"method":
+"filesystem and registry validation",
+
+"missing_layers":
+missing
+
+}
+
+
+with open(state_file,"w") as f:
+    json.dump(
+        state,
+        f,
+        indent=2
+    )
+
+
+print("Updated:")
+print("cognitive-state.json")
+
+print("")
+print("Active Layers:")
+
+for k,v in checks.items():
+    if v:
+        print("✓",k)
+
+print("")
+print("Missing Layers:")
+
+for k in missing:
+    print("✗",k)
+
+PY
+
+
+echo "========================================"
+echo " ✓ STATE RECONCILIATION COMPLETE"
+echo "========================================"

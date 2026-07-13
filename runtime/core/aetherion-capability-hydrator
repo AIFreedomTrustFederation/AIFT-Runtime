@@ -1,0 +1,90 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+set -e
+
+ROOT="$HOME/AIFT"
+REG="$ROOT/registry"
+
+OUT="$REG/repo-intelligence.json"
+
+echo "========================================"
+echo " Aetherion Capability Hydrator"
+echo "========================================"
+
+python - <<'PY'
+
+import os
+import json
+import glob
+
+ROOT=os.path.expanduser("~/AIFT")
+REG=os.path.join(ROOT,"registry")
+
+repos=[]
+
+for path in glob.glob(ROOT+"/*"):
+    if not os.path.isdir(path):
+        continue
+
+    if not os.path.isdir(os.path.join(path,".git")):
+        continue
+
+    name=os.path.basename(path)
+
+    capabilities=[]
+
+    files=[
+        os.path.join(path,".aift","capabilities.json"),
+        os.path.join(path,"aift.repo.json"),
+    ]
+
+    for f in files:
+        if os.path.exists(f):
+            try:
+                data=json.load(open(f))
+
+                if isinstance(data,dict):
+
+                    for key in [
+                        "capabilities",
+                        "abilities",
+                        "features",
+                        "skills"
+                    ]:
+                        value=data.get(key)
+
+                        if isinstance(value,list):
+                            capabilities.extend(value)
+
+            except Exception:
+                pass
+
+
+    repos.append(
+        {
+            "name":name,
+            "path":path,
+            "capabilities":sorted(list(set(capabilities)))
+        }
+    )
+
+
+with open(os.path.join(REG,"repo-intelligence.json"),"w") as f:
+    json.dump(repos,f,indent=2)
+
+
+print("Repositories indexed:",len(repos))
+
+for r in repos:
+    print(
+        r["name"],
+        "=>",
+        len(r["capabilities"]),
+        "capabilities"
+    )
+
+PY
+
+
+echo
+echo "✓ Capability hydration complete"

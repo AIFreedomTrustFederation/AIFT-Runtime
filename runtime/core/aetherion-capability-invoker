@@ -1,0 +1,63 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+PLAN="$REGISTRY/capability-execution-plan.json"
+RESULT="$REGISTRY/capability-execution-results.json"
+
+echo "========================================"
+echo " Aetherion Capability Invoker"
+echo " Prepared Plan → Controlled Invocation"
+echo "========================================"
+
+if [ ! -f "$PLAN" ]; then
+    echo "ERROR: capability execution plan missing"
+    exit 1
+fi
+
+python3 <<PY
+import json
+from datetime import datetime, timezone
+
+plan_file="$PLAN"
+result_file="$RESULT"
+
+with open(plan_file) as f:
+    plan=json.load(f)
+
+results=[]
+
+for item in plan.get("execution_plan", []):
+    results.append({
+        "approval_id": item.get("approval_id"),
+        "objective": item.get("objective"),
+        "action": item.get("action"),
+        "capabilities": item.get("selected_capabilities", []),
+        "execution_mode": item.get("execution_mode"),
+        "status": "invocation_ready",
+        "rollback_enabled": item.get("rollback_enabled", False),
+        "validation_required": item.get("validation_required", True)
+    })
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "invoker":"active",
+    "invoked_count":len(results),
+    "results":results,
+    "status":"invocation_complete"
+}
+
+with open(result_file,"w") as f:
+    json.dump(output,f,indent=2)
+
+print("Generated:")
+print("capability-execution-results.json")
+print("Invoked:",len(results))
+PY
+
+echo "========================================"
+echo " ✓ CAPABILITY INVOCATION COMPLETE"
+echo "========================================"

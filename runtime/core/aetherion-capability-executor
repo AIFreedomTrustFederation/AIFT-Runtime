@@ -1,0 +1,70 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+echo "========================================"
+echo " Aetherion Capability Executor"
+echo " Transaction → Capability Invocation"
+echo "========================================"
+
+REGISTRY="$HOME/AIFT/registry"
+
+python3 <<'PY'
+import json
+import os
+import datetime
+
+registry=os.path.expanduser("~/AIFT/registry")
+
+with open(f"{registry}/execution-transactions.json") as f:
+    transactions=json.load(f)
+
+with open(f"{registry}/execution-mappings.json") as f:
+    mappings=json.load(f)
+
+executions=[]
+
+for tx in transactions["transactions"]:
+
+    matched=[]
+
+    for mapping in mappings["execution_mappings"]:
+        if (
+            mapping["objective"] == tx["objective"]
+            and mapping["action"] == tx["action"]
+        ):
+            matched=mapping["candidate_tools"][:3]
+            break
+
+    executions.append({
+        "approval_id":tx["approval_id"],
+        "objective":tx["objective"],
+        "action":tx["action"],
+        "selected_capabilities":matched,
+        "execution_mode":"controlled",
+        "status":"prepared",
+        "rollback_enabled":tx["rollback_required"],
+        "validation_required":tx["post_validation_required"]
+    })
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.datetime.now(datetime.UTC).isoformat(),
+    "executor":"active",
+    "capabilities_prepared":len(executions),
+    "execution_plan":executions,
+    "status":"capability_execution_prepared"
+}
+
+with open(f"{registry}/capability-execution-plan.json","w") as f:
+    json.dump(output,f,indent=2)
+
+print("Generated:")
+print("capability-execution-plan.json")
+print("Prepared:",len(executions))
+PY
+
+echo "========================================"
+echo " ✓ CAPABILITY EXECUTOR READY"
+echo "========================================"

@@ -1,0 +1,98 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+ROOT="$HOME/AIFT"
+REG="$ROOT/registry"
+
+echo "========================================"
+echo " Aetherion Cognitive State Builder"
+echo "========================================"
+
+python - <<'PY'
+import os,json,datetime
+
+REG=os.path.expanduser("~/AIFT/registry")
+
+def load(name,default):
+    try:
+        with open(os.path.join(REG,name)) as f:
+            return json.load(f)
+    except:
+        return default
+
+charter=load("cognitive-charter.json",{})
+brain=load("repo-brain.json",{})
+graph=load("knowledge-graph.json",{})
+aether=load("aetherion-knowledge-graph.json",{})
+cap=load("capability-graph.json",{})
+agents=load("agent-map.json",{})
+
+def count(x):
+    if isinstance(x,list):
+        return len(x)
+    if isinstance(x,dict):
+        return len(x.keys())
+    return 0
+
+state={
+    "identity":{
+        "name":"Aetherion",
+        "type":"Federated Cognitive Runtime",
+        "version":"cognitive-state-v1"
+    },
+
+    "timestamp":datetime.datetime.utcnow().isoformat()+"Z",
+
+    "awareness":{
+        "repository_brain":bool(brain),
+        "knowledge_graph":bool(graph),
+        "aetherion_graph":bool(aether),
+        "charter":bool(charter)
+    },
+
+    "metrics":{
+        "repositories":count(graph),
+        "charter_sources":len(charter.get("sources",[])),
+        "capabilities":count(cap),
+        "agents":count(agents)
+    },
+
+    "cognitive_state":{
+        "identity":True,
+        "memory":True,
+        "awareness":True,
+        "reasoning":True,
+        "routing":True,
+        "execution":False,
+        "evaluation":False,
+        "self_improvement":False
+    },
+
+    "current_objective":
+    "Convert repository awareness into a goal-directed cognitive operating system",
+
+    "missing_layers":[
+        "objective engine",
+        "evaluation engine",
+        "improvement loop",
+        "strategic planner"
+    ],
+
+    "next_evolution":
+    "Create autonomous cognitive governance layer"
+}
+
+with open(os.path.join(REG,"cognitive-state.json"),"w") as f:
+    json.dump(state,f,indent=2)
+
+with open(os.path.join(REG,"cognitive-state.md"),"w") as f:
+    f.write("# Aetherion Cognitive State\n\n")
+    f.write(json.dumps(state,indent=2))
+
+print("Generated cognitive-state.json")
+print("Generated cognitive-state.md")
+
+PY
+
+echo "========================================"
+echo " ✓ COGNITIVE STATE CREATED"
+echo "========================================"

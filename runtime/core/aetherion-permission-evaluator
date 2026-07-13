@@ -1,0 +1,174 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+echo "========================================"
+echo " Aetherion Permission Evaluator"
+echo " Proposal → Governance Decision"
+echo "========================================"
+
+BASE="$HOME/AIFT"
+REG="$BASE/registry"
+
+python3 <<'PY'
+
+import os
+import json
+from datetime import datetime, timezone
+
+
+REG=os.path.expanduser("~/AIFT/registry")
+
+with open(
+    os.path.join(REG,"hydrated-proposals.json")
+) as f:
+    data=json.load(f)
+
+
+approved=[]
+review=[]
+blocked=[]
+
+
+for proposal in data["proposals"]:
+
+    decision=""
+
+    objective=str(
+        proposal.get("objective","")
+    ).lower()
+
+    action=str(
+        proposal.get("action","")
+    ).lower()
+
+
+    # Safety classification
+
+    if "requires architectural review" in action:
+
+        decision="review_required"
+
+        review.append(proposal)
+
+
+    elif any(
+        x in objective
+        for x in [
+            "improve documentation",
+            "improve todo",
+            "improve complexity",
+            "improve duplication"
+        ]
+    ):
+
+        decision="approved_for_mapping"
+
+        proposal["permission"]="granted"
+        approved.append(proposal)
+
+
+    else:
+
+        decision="review_required"
+        review.append(proposal)
+
+
+    proposal["decision"]=decision
+
+
+
+output={
+
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+
+    "timestamp":
+        datetime.now(timezone.utc).isoformat(),
+
+
+    "permission_state":{
+
+        "approved":
+            len(approved),
+
+        "review_required":
+            len(review),
+
+        "blocked":
+            len(blocked)
+    },
+
+
+    "approved_proposals":
+        approved,
+
+
+    "review_queue":
+        review,
+
+
+    "blocked":
+        blocked,
+
+
+    "next_stage":
+        "execution mapping"
+
+}
+
+
+with open(
+    os.path.join(REG,"permission-decisions.json"),
+    "w"
+) as f:
+    json.dump(
+        output,
+        f,
+        indent=2
+    )
+
+
+with open(
+    os.path.join(REG,"permission-decisions.md"),
+    "w"
+) as f:
+
+    f.write("# Aetherion Permission Decisions\n\n")
+
+    f.write(
+        "Approved: "
+        +str(len(approved))
+        +"\n\n"
+    )
+
+    for p in approved:
+
+        f.write(
+            "## "
+            +p["objective"]
+            +"\n"
+        )
+
+        f.write(
+            "Action: "
+            +p["action"]
+            +"\n\n"
+        )
+
+
+print("Generated:")
+print("permission-decisions.json")
+print("permission-decisions.md")
+print()
+print("Approved:",len(approved))
+print("Review:",len(review))
+print("Blocked:",len(blocked))
+
+
+PY
+
+echo "========================================"
+echo " ✓ PERMISSION EVALUATION COMPLETE"
+echo "========================================"
+

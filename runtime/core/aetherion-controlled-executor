@@ -1,0 +1,50 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+echo "========================================"
+echo " Aetherion Controlled Executor"
+echo " Validation → Governed Execution"
+echo "========================================"
+
+REGISTRY="$HOME/AIFT/registry"
+
+python3 <<'PY'
+import json, os, datetime
+
+registry=os.path.expanduser("~/AIFT/registry")
+
+with open(f"{registry}/validation-results.json") as f:
+    validation=json.load(f)
+
+results={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    "execution_mode":"controlled",
+    "validated_count":len(validation["validated_proposals"]),
+    "executions":[],
+    "status":"awaiting_execution_policy"
+}
+
+for proposal in validation["validated_proposals"]:
+    results["executions"].append({
+        "objective":proposal["objective"],
+        "action":proposal["action"],
+        "authority":proposal["execution_authority"],
+        "snapshot":"required",
+        "rollback":"enabled",
+        "status":"queued"
+    })
+
+with open(f"{registry}/execution-results.json","w") as f:
+    json.dump(results,f,indent=2)
+
+print("Generated:")
+print("execution-results.json")
+print("Queued:",len(results["executions"]))
+PY
+
+echo "========================================"
+echo " ✓ CONTROLLED EXECUTOR READY"
+echo "========================================"

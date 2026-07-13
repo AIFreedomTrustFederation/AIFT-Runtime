@@ -1,0 +1,87 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+echo "========================================"
+echo " Aetherion Approval Authority"
+echo " Approval Ledger → Execution Tokens"
+echo "========================================"
+
+REGISTRY="$HOME/AIFT/registry"
+
+python3 <<'PY'
+import json
+import os
+import uuid
+import hashlib
+import datetime
+
+registry=os.path.expanduser("~/AIFT/registry")
+
+with open(f"{registry}/execution-ledger.json") as f:
+    ledger=json.load(f)
+
+tokens=[]
+
+for item in ledger.get("ledger", []):
+
+    approval_id=str(uuid.uuid4())
+
+    token_payload={
+        "approval_id": approval_id,
+        "objective": item["objective"],
+        "action": item["action"],
+        "authority": item["authority"],
+        "created": datetime.datetime.now(
+            datetime.timezone.utc
+        ).isoformat()
+    }
+
+    digest=hashlib.sha256(
+        json.dumps(
+            token_payload,
+            sort_keys=True
+        ).encode()
+    ).hexdigest()
+
+    tokens.append({
+        "approval_id": approval_id,
+        "objective": item["objective"],
+        "action": item["action"],
+        "status": "awaiting_authorization",
+        "execution_token_hash": digest,
+        "requirements": {
+            "human_approval": True,
+            "snapshot_verified": True,
+            "rollback_enabled": True,
+            "post_execution_validation": True
+        }
+    })
+
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.datetime.now(
+        datetime.timezone.utc
+    ).isoformat(),
+    "authority":"approval_control_active",
+    "tokens_generated":len(tokens),
+    "tokens":tokens,
+    "execution_state":"authorization_required"
+}
+
+with open(
+    f"{registry}/approval-tokens.json",
+    "w"
+) as f:
+    json.dump(output,f,indent=2)
+
+print("Generated:")
+print("approval-tokens.json")
+print("Approval tokens:",len(tokens))
+PY
+
+echo "========================================"
+echo " ✓ APPROVAL AUTHORITY COMPLETE"
+echo "========================================"

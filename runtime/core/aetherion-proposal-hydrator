@@ -1,0 +1,202 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+echo "========================================"
+echo " Aetherion Proposal Hydrator"
+echo " Raw Proposal → Semantic Intent"
+echo "========================================"
+
+BASE="$HOME/AIFT"
+REG="$BASE/registry"
+
+python3 <<'PY'
+
+import os
+import json
+import glob
+from datetime import datetime, timezone
+
+
+REG=os.path.expanduser("~/AIFT/registry")
+
+queue_file=os.path.join(
+    REG,
+    "execution-queue.json"
+)
+
+with open(queue_file) as f:
+    queue=json.load(f)
+
+
+hydrated=[]
+
+
+def find_value(obj, keys):
+
+    if isinstance(obj, dict):
+
+        for k,v in obj.items():
+
+            if k.lower() in keys:
+                return v
+
+        for v in obj.values():
+            result=find_value(v,keys)
+            if result:
+                return result
+
+
+    elif isinstance(obj,list):
+
+        for item in obj:
+            result=find_value(item,keys)
+            if result:
+                return result
+
+    return None
+
+
+
+for item in queue["execution_candidates"]:
+
+    path=item["source"]
+
+    proposal={
+        "source":path,
+        "objective":None,
+        "action":None,
+        "type":"governance_proposal"
+    }
+
+
+    try:
+
+        with open(path) as f:
+            data=json.load(f)
+
+
+        proposal["objective"]=find_value(
+            data,
+            {
+                "objective",
+                "title",
+                "goal",
+                "name",
+                "problem"
+            }
+        )
+
+
+        proposal["action"]=find_value(
+            data,
+            {
+                "action",
+                "change",
+                "solution",
+                "implementation",
+                "recommendation",
+                "description"
+            }
+        )
+
+
+        if proposal["objective"] is None:
+            proposal["objective"]="Unclassified proposal"
+
+
+        if proposal["action"] is None:
+            proposal["action"]="Requires architectural review"
+
+
+        proposal["status"]="hydrated"
+        proposal["checks"]=[
+            "permission",
+            "dependency_validation",
+            "execution_mapping",
+            "validation"
+        ]
+
+
+        hydrated.append(proposal)
+
+
+    except Exception as e:
+
+        hydrated.append({
+            "source":path,
+            "error":str(e),
+            "status":"failed"
+        })
+
+
+output={
+
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+
+    "timestamp":
+        datetime.now(timezone.utc).isoformat(),
+
+    "hydration":{
+        "input_proposals":
+            len(queue["execution_candidates"]),
+
+        "hydrated":
+            len(hydrated)
+    },
+
+
+    "proposals":hydrated,
+
+
+    "next_stage":
+        "permission evaluation"
+
+}
+
+
+with open(
+    os.path.join(REG,"hydrated-proposals.json"),
+    "w"
+) as f:
+
+    json.dump(
+        output,
+        f,
+        indent=2
+    )
+
+
+with open(
+    os.path.join(REG,"hydrated-proposals.md"),
+    "w"
+) as f:
+
+    f.write("# Aetherion Hydrated Proposals\n\n")
+
+    for p in hydrated:
+
+        f.write(
+            "## "+str(p["objective"])+"\n\n"
+        )
+
+        f.write(
+            "Action: "+
+            str(p["action"])+"\n\n"
+        )
+
+
+print("Generated:")
+print("hydrated-proposals.json")
+print("hydrated-proposals.md")
+print()
+print("Hydrated:",len(hydrated))
+
+
+PY
+
+echo "========================================"
+echo " ✓ PROPOSAL HYDRATION COMPLETE"
+echo "========================================"
+

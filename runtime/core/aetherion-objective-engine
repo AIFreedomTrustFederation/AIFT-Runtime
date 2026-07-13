@@ -1,0 +1,185 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+ROOT="$HOME/AIFT"
+REG="$ROOT/registry"
+
+OUT="$REG/objectives.json"
+MD="$REG/objectives.md"
+
+echo "========================================"
+echo " Aetherion Objective Engine"
+echo " Cognitive Priority Generator"
+echo "========================================"
+
+python - <<'PY'
+
+import os,json,datetime
+
+REG=os.path.expanduser("~/AIFT/registry")
+
+def load(name,default):
+    path=os.path.join(REG,name)
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except:
+        return default
+
+
+charter=load("cognitive-charter.json",{})
+state=load("cognitive-state.json",{})
+brain=load("repo-brain.json",{})
+knowledge=load("knowledge-graph.json",{})
+aether=load("aetherion-knowledge-graph.json",{})
+capabilities=load("capability-graph.json",{})
+history=load("task-history.json",[])
+
+
+objectives=[]
+
+
+def add(priority,name,reason,action):
+    objectives.append({
+        "priority":priority,
+        "objective":name,
+        "reason":reason,
+        "recommended_action":action,
+        "status":"identified"
+    })
+
+
+# Cognitive layer evaluation
+
+cognitive=state.get("cognitive_state",{})
+
+
+if not cognitive.get("execution"):
+    add(
+        0.95,
+        "Create governed execution layer",
+        "Aetherion can reason and route but cannot safely execute and verify outcomes",
+        "Build execution manager with permissions and validation"
+    )
+
+
+if not cognitive.get("evaluation"):
+    add(
+        0.98,
+        "Create cognitive evaluation engine",
+        "No feedback mechanism exists to determine whether actions improve the system",
+        "Build evaluator that compares objectives against outcomes"
+    )
+
+
+if not cognitive.get("self_improvement"):
+    add(
+        0.97,
+        "Create self improvement loop",
+        "System has awareness but cannot convert experience into improvement",
+        "Build improvement planner connected to memory"
+    )
+
+
+# Knowledge integrity
+
+if not charter:
+    add(
+        0.90,
+        "Repair mission awareness",
+        "Cognitive charter unavailable",
+        "Compile mission sources"
+    )
+
+
+if not capabilities:
+    add(
+        0.80,
+        "Expand capability mapping",
+        "System lacks capability understanding",
+        "Hydrate repository intelligence"
+    )
+
+
+# Strategic layer
+
+add(
+    0.96,
+    "Create strategic planning layer",
+    "Aetherion requires ability to transform mission into ordered development plans",
+    "Build planner using objectives, state, and knowledge graph"
+)
+
+
+# Sort by importance
+
+objectives.sort(
+    key=lambda x:x["priority"],
+    reverse=True
+)
+
+
+output={
+
+    "engine":
+    "Aetherion Objective Engine",
+
+    "version":
+    "objective-engine-v1",
+
+    "generated":
+    datetime.datetime.now(datetime.UTC).isoformat(),
+
+    "mission_context":
+    charter.get("identity",{}),
+
+    "objectives":
+    objectives,
+
+    "next_cycle":
+    {
+        "evaluate":
+        "Measure objective completion",
+
+        "learn":
+        "Update cognitive state",
+
+        "improve":
+        "Generate new objectives"
+    }
+
+}
+
+
+with open(os.path.join(REG,"objectives.json"),"w") as f:
+    json.dump(output,f,indent=2)
+
+
+with open(os.path.join(REG,"objectives.md"),"w") as f:
+    f.write("# Aetherion Objectives\n\n")
+
+    for o in objectives:
+        f.write(
+            f"## Priority {o['priority']}\n"
+        )
+        f.write(
+            f"**{o['objective']}**\n\n"
+        )
+        f.write(
+            f"Reason: {o['reason']}\n\n"
+        )
+        f.write(
+            f"Action: {o['recommended_action']}\n\n"
+        )
+
+
+print("Generated:")
+print("objectives.json")
+print("objectives.md")
+print("")
+print("Objectives:",len(objectives))
+
+PY
+
+echo "========================================"
+echo " ✓ OBJECTIVE ENGINE COMPLETE"
+echo "========================================"

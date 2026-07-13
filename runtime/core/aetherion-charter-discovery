@@ -1,0 +1,43 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+ROOT="$HOME/AIFT"
+
+echo "========================================"
+echo " Aetherion Charter Discovery"
+echo "========================================"
+
+echo
+echo "[ Mission Sources ]"
+
+find "$ROOT" \
+\( -iname "MISSION*" \
+-o -iname "VISION*" \
+-o -iname "CHARTER*" \
+-o -iname "*manifest*.json" \
+-o -iname "*mission*.json" \) \
+-not -path "*/node_modules/*" \
+-not -path "*/.git/*" \
+2>/dev/null
+
+
+echo
+echo "[ Extracting Key Concepts ]"
+
+grep -Ril \
+-e "purpose" \
+-e "mission" \
+-e "vision" \
+-e "principle" \
+-e "value" \
+-e "objective" \
+-e "goal" \
+"$ROOT" \
+--exclude-dir=node_modules \
+--exclude-dir=.git \
+2>/dev/null | head -50
+
+
+echo
+echo "========================================"
+echo " Discovery Complete"
+echo "========================================"

@@ -1,0 +1,80 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+echo "========================================"
+echo " Aetherion Execution Integrator"
+echo " Policy → Approval Ledger"
+echo "========================================"
+
+REGISTRY="$HOME/AIFT/registry"
+
+python3 <<'PY'
+import json
+import os
+import datetime
+
+registry=os.path.expanduser("~/AIFT/registry")
+
+with open(f"{registry}/execution-policy.json") as f:
+    policy=json.load(f)
+
+ledger=[]
+
+for item in policy.get("policies", []):
+
+    entry={
+        "objective": item["objective"],
+        "action": item["action"],
+        "authority": item["authority"],
+        "policy_decision": item["decision"],
+        "execution_token": None,
+        "status": "awaiting_human_approval",
+        "created": datetime.datetime.now(
+            datetime.timezone.utc
+        ).isoformat()
+    }
+
+    if item["decision"] == "human_approval_required":
+        entry["approval_required"] = True
+    else:
+        entry["approval_required"] = False
+
+    ledger.append(entry)
+
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.datetime.now(
+        datetime.timezone.utc
+    ).isoformat(),
+    "integrator":"active",
+    "execution_state":"approval_pending",
+    "total_actions":len(ledger),
+    "ledger":ledger
+}
+
+with open(
+    f"{registry}/execution-ledger.json",
+    "w"
+) as f:
+    json.dump(output,f,indent=2)
+
+
+with open(
+    f"{registry}/execution-history.jsonl",
+    "a"
+) as f:
+    for entry in ledger:
+        f.write(json.dumps(entry)+"\n")
+
+print("Generated:")
+print("execution-ledger.json")
+print("execution-history.jsonl")
+print("Actions registered:",len(ledger))
+PY
+
+echo "========================================"
+echo " ✓ EXECUTION INTEGRATOR COMPLETE"
+echo "========================================"

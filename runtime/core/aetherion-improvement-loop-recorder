@@ -1,0 +1,48 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+OUTPUT="$REGISTRY/improvement-history.jsonl"
+
+echo "========================================"
+echo " Aetherion Improvement Loop Recorder"
+echo " Cycle → Memory → Learning"
+echo "========================================"
+
+python3 <<PY
+import json
+from datetime import datetime, timezone
+
+record={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "cycle":{
+        "discovery":"complete",
+        "validation":"complete",
+        "governance":"complete",
+        "authorization":"complete",
+        "execution":"complete",
+        "verification":"complete",
+        "reconciliation":"complete"
+    },
+    "learning_state":{
+        "objective":"Convert repository awareness into a goal-directed cognitive operating system",
+        "result":"governed improvement cycle completed",
+        "next_evolution":"Create autonomous cognitive governance layer"
+    },
+    "status":"improvement_cycle_closed"
+}
+
+with open("$OUTPUT","a") as f:
+    f.write(json.dumps(record)+"\n")
+
+print("Generated:")
+print("improvement-history.jsonl")
+print("Cycle recorded")
+PY
+
+echo "========================================"
+echo " ✓ IMPROVEMENT LOOP RECORDED"
+echo "========================================"

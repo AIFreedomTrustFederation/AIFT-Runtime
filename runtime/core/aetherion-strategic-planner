@@ -1,0 +1,210 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+ROOT="$HOME/AIFT"
+REG="$ROOT/registry"
+
+STATE="$REG/cognitive-state.json"
+EVAL="$REG/evaluation-report.json"
+OBJ="$REG/objectives.json"
+GRAPH="$REG/knowledge-graph.json"
+BRAIN="$REG/repo-brain.json"
+
+OUT="$REG/strategic-plan.json"
+MD="$REG/strategic-plan.md"
+
+echo "========================================"
+echo " Aetherion Strategic Planner"
+echo " Mission → Architecture → Build Plan"
+echo "========================================"
+
+python - <<'PY'
+
+import os,json
+from datetime import datetime, timezone
+
+ROOT=os.path.expanduser("~/AIFT")
+REG=os.path.join(ROOT,"registry")
+
+
+def load(name,default):
+    path=os.path.join(REG,name)
+    if os.path.exists(path):
+        try:
+            with open(path) as f:
+                return json.load(f)
+        except:
+            return default
+    return default
+
+
+state=load("cognitive-state.json",{})
+evaluation=load("evaluation-report.json",{})
+objectives=load("objectives.json",{})
+brain=load("repo-brain.json",{})
+
+
+missing=state.get(
+    "missing_layers",
+    []
+)
+
+
+# Existing architectural anchors
+repo_sources=[]
+
+if isinstance(brain,list):
+    for r in brain[:10]:
+        if isinstance(r,dict):
+            repo_sources.append(
+                r.get("name","unknown")
+            )
+
+elif isinstance(brain,dict):
+    for k in brain.keys():
+        repo_sources.append(k)
+
+
+phases=[]
+
+
+for index,obj in enumerate(
+    objectives.get("objectives",[])
+    ):
+
+    phases.append({
+
+        "phase":
+            index+1,
+
+        "objective":
+            obj.get("objective"),
+
+        "priority":
+            obj.get("priority"),
+
+        "reason":
+            obj.get("reason"),
+
+        "recommended_action":
+            obj.get("recommended_action"),
+
+        "architecture_sources":
+            repo_sources[:5],
+
+        "status":
+            "planned"
+
+    })
+
+
+plan={
+
+    "identity":{
+        "name":"Aetherion",
+        "type":
+        "Federated Cognitive Runtime"
+    },
+
+    "timestamp":
+        datetime.now(timezone.utc).isoformat(),
+
+    "mission":
+        "Transform repository awareness into a goal-directed self-improving cognitive operating system",
+
+    "current_state":
+    {
+        "active_layers":
+            state.get("cognitive_state",{}),
+
+        "missing_layers":
+            missing
+    },
+
+
+    "strategy":
+
+    {
+
+        "principle":
+        "Build missing cognitive functions while preserving existing intelligence layers",
+
+        "phases":
+            phases
+    },
+
+
+    "next_execution":
+
+    [
+        "Create planner-to-task translator",
+        "Connect strategic plan to execution manager",
+        "Record outcomes into memory",
+        "Generate improvement proposals"
+    ]
+
+}
+
+
+with open(
+    os.path.join(REG,"strategic-plan.json"),
+    "w"
+) as f:
+    json.dump(plan,f,indent=2)
+
+
+with open(
+    os.path.join(REG,"strategic-plan.md"),
+    "w"
+) as f:
+
+    f.write("# Aetherion Strategic Plan\n\n")
+
+    f.write(
+        "Mission:\n"
+        + plan["mission"]
+        + "\n\n"
+    )
+
+    for phase in phases:
+
+        f.write(
+            "## Phase "
+            + str(phase["phase"])
+            + "\n\n"
+        )
+
+        f.write(
+            "**"
+            + str(phase["objective"])
+            + "**\n\n"
+        )
+
+        f.write(
+            "Priority: "
+            + str(phase["priority"])
+            + "\n\n"
+        )
+
+        f.write(
+            "Reason: "
+            + str(phase["reason"])
+            + "\n\n"
+        )
+
+        f.write(
+            "Action: "
+            + str(phase["recommended_action"])
+            + "\n\n"
+        )
+
+
+print("Generated:")
+print("strategic-plan.json")
+print("strategic-plan.md")
+
+PY
+
+
+echo "========================================"
+echo " ✓ STRATEGIC PLANNING COMPLETE"
+echo "========================================"

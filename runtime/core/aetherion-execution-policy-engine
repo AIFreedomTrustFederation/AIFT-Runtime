@@ -1,0 +1,84 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+echo "========================================"
+echo " Aetherion Execution Policy Engine"
+echo " Queue → Authority Decision"
+echo "========================================"
+
+REGISTRY="$HOME/AIFT/registry"
+
+python3 <<'PY'
+import json
+import os
+import datetime
+
+registry=os.path.expanduser("~/AIFT/registry")
+
+with open(f"{registry}/execution-results.json") as f:
+    execution=json.load(f)
+
+with open(f"{registry}/execution-snapshots.json") as f:
+    snapshots=json.load(f)
+
+policies=[]
+
+for item in execution.get("executions", []):
+
+    policy={
+        "objective": item["objective"],
+        "action": item["action"],
+        "authority": item["authority"],
+        "decision": None,
+        "requirements": {
+            "snapshot_verified": False,
+            "rollback_available": False,
+            "validation_required": True
+        }
+    }
+
+    if snapshots.get("status") == "snapshot_ready":
+        policy["requirements"]["snapshot_verified"] = True
+
+    if item.get("rollback") == "enabled":
+        policy["requirements"]["rollback_available"] = True
+
+    if (
+        policy["requirements"]["snapshot_verified"]
+        and policy["requirements"]["rollback_available"]
+        and item["authority"] == "governed"
+    ):
+        policy["decision"] = "human_approval_required"
+    else:
+        policy["decision"] = "blocked"
+
+    policies.append(policy)
+
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.datetime.now(
+        datetime.timezone.utc
+    ).isoformat(),
+    "policy_engine":"active",
+    "evaluated":len(policies),
+    "policies":policies,
+    "execution_authority":"restricted"
+}
+
+with open(
+    f"{registry}/execution-policy.json",
+    "w"
+) as f:
+    json.dump(output,f,indent=2)
+
+print("Generated:")
+print("execution-policy.json")
+print("Policies evaluated:",len(policies))
+PY
+
+echo "========================================"
+echo " ✓ EXECUTION POLICY COMPLETE"
+echo "========================================"

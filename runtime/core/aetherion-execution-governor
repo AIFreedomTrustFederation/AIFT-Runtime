@@ -1,0 +1,60 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+echo "========================================"
+echo " Aetherion Execution Governor"
+echo " Authorization → Controlled Execution"
+echo "========================================"
+
+REGISTRY="$HOME/AIFT/registry"
+
+python3 <<'PY'
+import json
+import os
+import datetime
+
+registry=os.path.expanduser("~/AIFT/registry")
+
+with open(f"{registry}/approval-tokens.json") as f:
+    approvals=json.load(f)
+
+governed=[]
+
+for token in approvals["tokens"]:
+    governed.append({
+        "approval_id": token["approval_id"],
+        "objective": token["objective"],
+        "action": token["action"],
+        "authorization": "pending_operator_confirmation",
+        "execution_permission": False,
+        "snapshot_required": True,
+        "rollback_required": True,
+        "post_validation_required": True
+    })
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.datetime.now(datetime.UTC).isoformat(),
+    "governor":"active",
+    "authorization_state":"awaiting_operator_confirmation",
+    "controlled_actions":governed
+}
+
+with open(f"{registry}/execution-governance.json","w") as f:
+    json.dump(output,f,indent=2)
+
+with open(f"{registry}/execution-governance.md","w") as f:
+    f.write("# Aetherion Execution Governance\n\n")
+    f.write("State: awaiting operator confirmation\n")
+
+print("Generated:")
+print("execution-governance.json")
+print("execution-governance.md")
+print("Actions governed:",len(governed))
+PY
+
+echo "========================================"
+echo " ✓ EXECUTION GOVERNOR READY"
+echo "========================================"
