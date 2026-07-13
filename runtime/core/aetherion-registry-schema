@@ -1,0 +1,42 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+
+echo "========================================"
+echo " Aetherion Registry Schema"
+echo "========================================"
+
+cat > "$REGISTRY/schema.json" <<EOF
+{
+  "schema_version": "1.0.0",
+  "runtime": {
+    "name": "Aetherion",
+    "system": "Federated Cognitive Runtime",
+    "registry_version": "1.0.0"
+  },
+  "required_fields": [
+    "schema_version",
+    "identity",
+    "timestamp",
+    "status"
+  ],
+  "recommended_fields": [
+    "engine",
+    "audit",
+    "metrics",
+    "trace_id"
+  ],
+  "audit": {
+    "immutable": true,
+    "trace_ids_required": true,
+    "timestamps_required": true
+  }
+}
+EOF
+
+echo "Schema written:"
+echo "$REGISTRY/schema.json"
+
+echo "========================================"
+echo " ✓ REGISTRY SCHEMA INSTALLED"
+echo "========================================"
