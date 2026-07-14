@@ -1,0 +1,84 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+
+echo "========================================"
+echo " Aetherion Knowledge Graph"
+echo " Semantic Reasoning Memory Layer"
+echo "========================================"
+
+python3 <<PY
+import json
+from datetime import datetime, timezone
+import os
+
+registry="$REGISTRY"
+
+nodes=[]
+
+memory_file=registry+"/aetherion-memory.json"
+
+if os.path.exists(memory_file):
+    with open(memory_file) as f:
+        memory=json.load(f)
+
+    for item in memory.get("memories",[]):
+        nodes.append({
+            "node_id":item.get("memory_id"),
+            "type":item.get("type"),
+            "relationships":[
+                "execution",
+                "learning",
+                "evolution"
+            ]
+        })
+
+
+graph={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+
+    "engine":"knowledge_graph_active",
+
+    "timestamp":
+        datetime.now(timezone.utc).isoformat(),
+
+    "graph":{
+        "nodes":nodes,
+        "node_count":len(nodes)
+    },
+
+    "reasoning_links":[
+        {
+            "source":"experience",
+            "target":"knowledge",
+            "relationship":"creates"
+        },
+        {
+            "source":"knowledge",
+            "target":"future_action",
+            "relationship":"informs"
+        }
+    ],
+
+    "status":"semantic_memory_initialized"
+}
+
+
+with open(registry+"/aetherion-knowledge-graph.json","w") as f:
+    json.dump(graph,f,indent=2)
+
+
+print("Generated:")
+print("aetherion-knowledge-graph.json")
+print("Nodes:",len(nodes))
+
+PY
+
+echo ""
+echo "========================================"
+echo " ✓ KNOWLEDGE GRAPH COMPLETE"
+echo "========================================"
+
