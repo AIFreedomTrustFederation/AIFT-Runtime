@@ -1,0 +1,103 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+
+AGENTS="$REGISTRY/agent-execution-history.json"
+OUTPUT="$REGISTRY/capability-bindings.json"
+
+echo "========================================"
+echo " Aetherion Capability Engine"
+echo " Agent Capability Binding Layer"
+echo "========================================"
+
+python3 <<PY
+import json
+import os
+from datetime import datetime, timezone
+
+registry=os.path.expanduser("$REGISTRY")
+
+with open("$AGENTS") as f:
+    agents=json.load(f)
+
+executions=agents.get("executions",[])
+
+bindings=[]
+
+for item in executions:
+
+    role=item.get("agent_role")
+    capabilities=item.get("capabilities",[])
+
+    for capability in capabilities:
+
+        if capability in [
+            "code_generation",
+            "repository_analysis",
+            "workflow_creation"
+        ]:
+            tool="AIFT-Forge"
+            path="packages/forge-core"
+
+        elif capability in [
+            "knowledge_consolidation",
+            "memory_analysis"
+        ]:
+            tool="AIFT-Runtime"
+            path="runtime/intelligence"
+
+        elif capability in [
+            "security_analysis",
+            "validation"
+        ]:
+            tool="AIFT-OS"
+            path="system/security"
+
+        elif capability in [
+            "planning",
+            "market_analysis"
+        ]:
+            tool="Capital-City-Provisions"
+            path="business/intelligence"
+
+        else:
+            tool="AIFT-Runtime"
+            path="runtime/core"
+
+
+        bindings.append({
+            "agent_role":role,
+            "capability":capability,
+            "bound_repository":tool,
+            "execution_path":path,
+            "status":"bound"
+        })
+
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "engine":"capability_binding_active",
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "bindings_count":len(bindings),
+    "bindings":bindings,
+    "status":"capability_resolution_complete"
+}
+
+
+with open("$OUTPUT","w") as f:
+    json.dump(output,f,indent=2)
+
+
+print("Generated:")
+print("capability-bindings.json")
+print("Bindings:",len(bindings))
+
+PY
+
+echo ""
+echo "========================================"
+echo " ✓ CAPABILITY ENGINE COMPLETE"
+echo "========================================"
