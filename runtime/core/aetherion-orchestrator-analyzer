@@ -1,0 +1,182 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+WORKSPACE="$HOME/AIFT"
+REGISTRY="$HOME/AIFT/registry"
+
+OUTPUT="$REGISTRY/orchestrator-architecture-map.json"
+
+echo "========================================"
+echo " Aetherion Orchestrator Analyzer"
+echo " Federation Architecture Mapping"
+echo "========================================"
+
+python3 <<PY
+import os
+import json
+from datetime import datetime, timezone
+
+workspace="$WORKSPACE"
+
+targets=[
+    {
+        "repo":"AIFT-Runtime",
+        "paths":[
+            "runtime/core"
+        ],
+        "role":"executive_governance"
+    },
+    {
+        "repo":"AIFT-Forge",
+        "paths":[
+            "packages/forge-core/src/orchestrator",
+            "packages/forge-core/src/commands",
+            "packages/forge-core/src/models"
+        ],
+        "role":"workflow_orchestration"
+    },
+    {
+        "repo":"AIFT-OS",
+        "paths":[
+            "phase13-ai-orchestrator.sh",
+            "docs/architecture"
+        ],
+        "role":"system_orchestration"
+    },
+    {
+        "repo":"OpenMontage",
+        "paths":[
+            "lib",
+            "schemas",
+            "skills"
+        ],
+        "role":"pipeline_orchestration"
+    }
+]
+
+
+components=[]
+
+keywords=[
+    "route",
+    "dispatch",
+    "workflow",
+    "pipeline",
+    "agent",
+    "model",
+    "execute",
+    "orchestrate",
+    "governance",
+    "scheduler"
+]
+
+
+for target in targets:
+
+    repo_path=os.path.join(
+        workspace,
+        target["repo"]
+    )
+
+    for rel in target["paths"]:
+
+        path=os.path.join(
+            repo_path,
+            rel
+        )
+
+        if not os.path.exists(path):
+            continue
+
+        if os.path.isfile(path):
+            files=[path]
+        else:
+            files=[]
+
+            for root,dirs,names in os.walk(path):
+
+                dirs[:]=[
+                    d for d in dirs
+                    if d not in [
+                        ".git",
+                        "node_modules",
+                        "__pycache__"
+                    ]
+                ]
+
+                for name in names:
+                    files.append(
+                        os.path.join(root,name)
+                    )
+
+
+        for file in files:
+
+            if not file.endswith((
+                ".sh",
+                ".js",
+                ".mjs",
+                ".ts",
+                ".py",
+                ".md",
+                ".json"
+            )):
+                continue
+
+            try:
+                with open(file,errors="ignore") as f:
+                    text=f.read().lower()
+
+            except:
+                continue
+
+
+            found=[
+                k for k in keywords
+                if k in text
+            ]
+
+            if found:
+
+                components.append({
+                    "repository":target["repo"],
+                    "role":target["role"],
+                    "component":file.replace(
+                        workspace,
+                        "~ /AIFT"
+                    ),
+                    "capabilities":found[:10]
+                })
+
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "engine":"orchestrator_analyzer",
+    "architecture":{
+        "primary_candidate":"AIFT-Runtime",
+        "workflow_engine":"AIFT-Forge",
+        "system_layer":"AIFT-OS",
+        "pipeline_layer":"OpenMontage"
+    },
+    "components":components,
+    "component_count":len(components),
+    "status":"orchestrator_architecture_mapped"
+}
+
+
+with open("$OUTPUT","w") as f:
+    json.dump(output,f,indent=2)
+
+
+print("Mapped components:",len(components))
+print("Generated:")
+print("$OUTPUT")
+
+PY
+
+echo "========================================"
+echo " ✓ ORCHESTRATOR ANALYSIS COMPLETE"
+echo "========================================"
