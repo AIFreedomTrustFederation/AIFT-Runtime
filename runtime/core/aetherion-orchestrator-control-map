@@ -1,0 +1,103 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+
+INPUT="$REGISTRY/orchestrator-registry.json"
+OUTPUT="$REGISTRY/orchestrator-control-map.json"
+
+echo "========================================"
+echo " Aetherion Orchestrator Control Mapper"
+echo " Federation Authority Graph"
+echo "========================================"
+
+python3 <<PY
+import json
+from datetime import datetime, timezone
+
+with open("$INPUT") as f:
+    data=json.load(f)
+
+registry=data.get("registry",[])
+
+layers={
+    "executive":[],
+    "workflow":[],
+    "system":[],
+    "pipeline":[],
+    "support":[],
+}
+
+for item in registry:
+
+    repo=item.get("repository")
+    role=item.get("role","")
+    authority=item.get("authority","")
+
+    entry={
+        "component":item.get("component"),
+        "repository":repo,
+        "authority":authority,
+        "score":item.get("score"),
+        "capabilities":item.get("capabilities")
+    }
+
+    if repo=="AIFT-Runtime":
+        layers["executive"].append(entry)
+
+    elif repo=="AIFT-Forge":
+        layers["workflow"].append(entry)
+
+    elif repo=="AIFT-OS":
+        layers["system"].append(entry)
+
+    elif repo=="OpenMontage":
+        layers["pipeline"].append(entry)
+
+    else:
+        layers["support"].append(entry)
+
+
+for key in layers:
+    layers[key]=sorted(
+        layers[key],
+        key=lambda x:x.get("score",0),
+        reverse=True
+    )
+
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "engine":"orchestrator_control_mapper",
+
+    "control_model":{
+        "executive":"AIFT-Runtime",
+        "workflow":"AIFT-Forge",
+        "system":"AIFT-OS",
+        "pipeline":"OpenMontage"
+    },
+
+    "layers":layers,
+
+    "status":"control_map_complete"
+}
+
+
+with open("$OUTPUT","w") as f:
+    json.dump(output,f,indent=2)
+
+
+print("Generated:")
+print("orchestrator-control-map.json")
+
+for k,v in layers.items():
+    print(k,":",len(v))
+
+PY
+
+echo "========================================"
+echo " ✓ CONTROL MAP COMPLETE"
+echo "========================================"
