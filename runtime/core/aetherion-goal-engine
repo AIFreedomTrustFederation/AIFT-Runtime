@@ -1,0 +1,159 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+
+GOALS="$REGISTRY/goals.json"
+STATE="$REGISTRY/goal-state.json"
+HISTORY="$REGISTRY/goal-history.json"
+
+echo "========================================"
+echo " Aetherion Goal Engine"
+echo " Persistent Objective Management Layer"
+echo "========================================"
+
+python3 <<PY
+
+import json
+import os
+import uuid
+from datetime import datetime, timezone
+
+goals_file="$GOALS"
+state_file="$STATE"
+history_file="$HISTORY"
+
+
+def load(path, default):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except:
+        return default
+
+
+goals=load(goals_file,{
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "goals":[]
+})
+
+
+history=load(history_file,{
+    "events":[]
+})
+
+
+default_goals=[
+
+{
+"id":"goal_federation_evolution",
+"name":"Federation Evolution",
+"priority":1,
+"status":"active",
+"description":"Improve federation intelligence and capability"
+},
+
+{
+"id":"goal_autonomous_workflows",
+"name":"Autonomous Workflow Creation",
+"priority":2,
+"status":"active",
+"description":"Create reusable autonomous workflow agents"
+},
+
+{
+"id":"goal_memory",
+"name":"Long Term Memory Consolidation",
+"priority":3,
+"status":"planned",
+"description":"Create persistent cognitive memory layer"
+}
+
+]
+
+
+if len(goals["goals"])==0:
+    goals["goals"]=default_goals
+
+
+active=sorted(
+    goals["goals"],
+    key=lambda x:x["priority"]
+)
+
+
+next_goal=active[0] if active else None
+
+
+state={
+
+"identity":{
+"name":"Aetherion",
+"system":"Federated Cognitive Runtime"
+},
+
+"timestamp":datetime.now(timezone.utc).isoformat(),
+
+"engine":"goal_management_active",
+
+"active_goal":next_goal,
+
+"goal_count":len(active),
+
+"next_action":{
+
+"objective": next_goal["name"] if next_goal else None,
+
+"recommended":
+"Route objective through federation orchestrator"
+
+},
+
+"status":"goal_state_generated"
+
+}
+
+
+history["events"].append({
+
+"trace_id":str(uuid.uuid4()),
+
+"timestamp":datetime.now(timezone.utc).isoformat(),
+
+"event":"goal_evaluation",
+
+"selected_goal":next_goal
+
+})
+
+
+with open(goals_file,"w") as f:
+    json.dump(goals,f,indent=2)
+
+
+with open(state_file,"w") as f:
+    json.dump(state,f,indent=2)
+
+
+with open(history_file,"w") as f:
+    json.dump(history,f,indent=2)
+
+
+print("Generated:")
+print("goals.json")
+print("goal-state.json")
+print("goal-history.json")
+
+print("")
+print("Active Goal:")
+print(next_goal["name"] if next_goal else "None")
+
+
+PY
+
+
+echo "========================================"
+echo " ✓ GOAL ENGINE COMPLETE"
+echo "========================================"
