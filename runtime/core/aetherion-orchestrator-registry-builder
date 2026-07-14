@@ -1,0 +1,133 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+
+INPUT="$REGISTRY/orchestrator-architecture-map.json"
+OUTPUT="$REGISTRY/orchestrator-registry.json"
+
+echo "========================================"
+echo " Aetherion Orchestrator Registry Builder"
+echo " Capability Ranking Engine"
+echo "========================================"
+
+python3 <<PY
+import json
+import os
+from datetime import datetime, timezone
+
+with open("$INPUT") as f:
+    data=json.load(f)
+
+components=data.get("components",[])
+
+ranked=[]
+
+for item in components:
+
+    component=item.get("component","").lower()
+    caps=item.get("capabilities",[])
+    repo=item.get("repository")
+
+    score=0
+    reasons=[]
+
+    # Strong runtime indicators
+    if "runtime/core" in component:
+        score+=5
+        reasons.append("runtime_core")
+
+    if "orchestrator" in component:
+        score+=4
+        reasons.append("orchestrator_named")
+
+    if "router" in component:
+        score+=4
+        reasons.append("routing_component")
+
+    if "engine" in component:
+        score+=3
+        reasons.append("engine_component")
+
+    if "executor" in component:
+        score+=3
+        reasons.append("execution_component")
+
+    if "workflow" in component:
+        score+=3
+        reasons.append("workflow_component")
+
+    if "pipeline" in component:
+        score+=2
+        reasons.append("pipeline_component")
+
+    if "governance" in component:
+        score+=5
+        reasons.append("governance_component")
+
+    # Reduce noise
+    if "install" in component:
+        score-=5
+        reasons.append("installer_penalty")
+
+    if "fix-" in component or "patch-" in component or "repair-" in component:
+        score-=3
+        reasons.append("maintenance_penalty")
+
+    authority="supporting"
+
+    if score>=12:
+        authority="primary_candidate"
+    elif score>=7:
+        authority="core_component"
+    elif score>=3:
+        authority="support_component"
+
+    ranked.append({
+        "repository":repo,
+        "component":item.get("component"),
+        "role":item.get("role"),
+        "capabilities":caps,
+        "score":score,
+        "authority":authority,
+        "reasons":reasons
+    })
+
+
+ranked.sort(
+    key=lambda x:x["score"],
+    reverse=True
+)
+
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "engine":"orchestrator_registry_builder",
+    "purpose":"Rank federation orchestration components",
+    "component_count":len(ranked),
+    "primary_candidates":[
+        x for x in ranked
+        if x["authority"]=="primary_candidate"
+    ],
+    "registry":ranked,
+    "status":"registry_complete"
+}
+
+
+with open("$OUTPUT","w") as f:
+    json.dump(output,f,indent=2)
+
+
+print("Registry generated")
+print("Components ranked:",len(ranked))
+print("Primary candidates:",
+      len(output["primary_candidates"]))
+
+PY
+
+echo "========================================"
+echo " ✓ ORCHESTRATOR REGISTRY COMPLETE"
+echo "========================================"
