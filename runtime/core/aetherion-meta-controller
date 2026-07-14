@@ -1,0 +1,68 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+
+echo "========================================"
+echo " Aetherion Meta Controller"
+echo " Federation Intelligence Supervisor"
+echo "========================================"
+
+echo ""
+echo "[1] Running cognitive cycle..."
+aetherion-cycle
+
+echo ""
+echo "[2] Running agent factory..."
+aetherion-agent-factory
+
+echo ""
+echo "[3] Running agent runtime..."
+aetherion-agent-runtime
+
+echo ""
+echo "[4] Resolving capabilities..."
+aetherion-capability-engine
+
+echo ""
+echo "[5] Generating evolution state..."
+
+python3 <<PY
+import json
+from datetime import datetime, timezone
+
+registry="$REGISTRY"
+
+state={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "mode":"meta_control_operation",
+    "layers":{
+        "cognitive_cycle":True,
+        "agents":True,
+        "runtime":True,
+        "capabilities":True,
+        "memory":True,
+        "governance":True
+    },
+    "objective":
+        "Continuously evolve federation intelligence",
+    "status":
+        "meta_controller_complete"
+}
+
+with open(registry+"/aetherion-meta-state.json","w") as f:
+    json.dump(state,f,indent=2)
+
+print("Generated:")
+print("aetherion-meta-state.json")
+
+PY
+
+echo ""
+echo "========================================"
+echo " ✓ AETHERION META CONTROL COMPLETE"
+echo "========================================"
+
