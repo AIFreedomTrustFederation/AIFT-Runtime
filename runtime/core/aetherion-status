@@ -1,23 +1,128 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-ROOT="$HOME/AIFT"
+REGISTRY="$HOME/AIFT/registry"
 
-echo "================================"
-echo " Aetherion System Status"
-echo "================================"
+echo "========================================"
+echo " AETHERION FEDERATION STATUS"
+echo " Federated Cognitive Runtime"
+echo "========================================"
 
-echo
-echo "Registry:"
-ls "$ROOT/registry"
+echo ""
 
-echo
-echo "Runtime:"
-ls "$ROOT/runtime"
+python3 <<PY
 
-echo
-echo "Last Route:"
+import os
+import json
+from datetime import datetime, timezone
 
-cat "$ROOT/registry/latest-routing.json" 2>/dev/null || echo "No routing yet"
+registry="$REGISTRY"
 
-echo
-echo "================================"
+def load(name, default=None):
+    path=os.path.join(registry,name)
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except:
+        return default
+
+
+state=load("aetherion-state.json",{})
+capabilities=load("federation-capability-map.json",{})
+execution=load("execution-history.json",{})
+validation=load("validation-results.json",{})
+
+
+print("Identity:")
+print("  Name: Aetherion")
+print("  System: Federated Cognitive Runtime")
+
+print("")
+
+print("Repositories:")
+
+repos=[
+    "AIFT-Runtime",
+    "AIFT-Forge",
+    "AIFT-OS",
+    "OpenMontage",
+    "BookSmith-Federation-OS"
+]
+
+for repo in repos:
+    path=os.path.expanduser("~/AIFT/"+repo)
+
+    if os.path.exists(path):
+        print("  ✓",repo)
+    else:
+        print("  ✗",repo)
+
+
+print("")
+
+count=capabilities.get(
+    "component_count",
+    0
+)
+
+print("Capabilities:")
+print(" ",count,"discovered")
+
+
+print("")
+
+if execution:
+
+    executions=execution.get(
+        "executions",
+        []
+    )
+
+    if executions:
+
+        last=executions[-1]
+
+        print("Last Execution:")
+        print(" ",last.get("objective"))
+        print(" Status:",
+              last.get("status"))
+
+    else:
+        print("Last Execution: None")
+
+else:
+    print("Last Execution: None")
+
+
+print("")
+
+if validation:
+
+    print("Validation:")
+    print(" Available")
+
+else:
+    print("Validation:")
+    print(" Not initialized")
+
+
+print("")
+
+print("System State:")
+
+if state.get("status"):
+    print(" ",state["status"])
+
+else:
+    print(" Operational")
+
+
+print("")
+print("Timestamp:")
+print(datetime.now(timezone.utc).isoformat())
+
+PY
+
+echo ""
+echo "========================================"
+echo " ✓ STATUS CHECK COMPLETE"
+echo "========================================"
