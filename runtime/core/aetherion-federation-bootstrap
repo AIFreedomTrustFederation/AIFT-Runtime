@@ -1,0 +1,244 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+set -e
+
+AIFT="$HOME/AIFT"
+REGISTRY="$AIFT/registry"
+
+echo "========================================"
+echo " Aetherion Federation Bootstrap"
+echo " Federation State Reconstruction Layer"
+echo "========================================"
+
+mkdir -p "$REGISTRY"
+
+REPOS=(
+"AIFT-Runtime"
+"AIFT-Forge"
+"AIFT-OS"
+"OpenMontage"
+"BookSmith-Federation-OS"
+)
+
+echo ""
+echo "Updating federation repositories..."
+
+for repo in "${REPOS[@]}"; do
+
+    if [ -d "$AIFT/$repo/.git" ]; then
+        echo "Updating $repo"
+
+        cd "$AIFT/$repo"
+
+        git pull --rebase || true
+
+    else
+        echo "Skipping missing repository: $repo"
+    fi
+
+done
+
+
+cd "$AIFT/AIFT-Runtime"
+
+
+echo ""
+echo "Scanning federation capabilities..."
+
+
+python3 <<PY
+
+import os
+import json
+from datetime import datetime, timezone
+import hashlib
+
+
+ROOT="$AIFT"
+OUTPUT="$REGISTRY/federation-capability-map.json"
+ORCH="$REGISTRY/orchestrator-registry.json"
+
+
+repositories=[
+    "AIFT-Runtime",
+    "AIFT-Forge",
+    "AIFT-OS",
+    "OpenMontage",
+    "BookSmith-Federation-OS"
+]
+
+
+keywords={
+    "orchestrator":[
+        "orchestrator",
+        "orchestration",
+        "orchestrate"
+    ],
+    "agent":[
+        "agent",
+        "agents"
+    ],
+    "workflow":[
+        "workflow",
+        "pipeline"
+    ],
+    "router":[
+        "router",
+        "route"
+    ],
+    "scheduler":[
+        "scheduler",
+        "schedule"
+    ],
+    "governance":[
+        "governance",
+        "policy",
+        "charter"
+    ],
+    "validation":[
+        "validation",
+        "validator",
+        "verify"
+    ]
+}
+
+
+components=[]
+
+
+for repo in repositories:
+
+    path=os.path.join(ROOT,repo)
+
+    if not os.path.exists(path):
+        continue
+
+
+    for root,dirs,files in os.walk(path):
+
+        dirs[:]=[
+            d for d in dirs
+            if d not in [
+                ".git",
+                "node_modules",
+                "__pycache__"
+            ]
+        ]
+
+
+        for file in files:
+
+            full=os.path.join(root,file)
+
+            try:
+
+                if os.path.getsize(full)>500000:
+                    continue
+
+
+                with open(
+                    full,
+                    "r",
+                    errors="ignore"
+                ) as f:
+                    text=f.read().lower()
+
+
+            except:
+                continue
+
+
+            caps=[]
+
+            for capability,terms in keywords.items():
+
+                if any(term in text or term in file.lower()
+                       for term in terms):
+
+                    caps.append(capability)
+
+
+            if caps:
+
+                score=len(caps)
+
+                components.append(
+                    {
+                    "repository":repo,
+                    "component":full.replace(ROOT,"~"),
+                    "capabilities":caps,
+                    "score":score
+                    }
+                )
+
+
+components=sorted(
+    components,
+    key=lambda x:x["score"],
+    reverse=True
+)
+
+
+registry={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+
+    "timestamp":
+        datetime.now(timezone.utc).isoformat(),
+
+    "engine":
+        "federation_bootstrap",
+
+    "components":
+        components,
+
+    "component_count":
+        len(components)
+}
+
+
+with open(ORCH,"w") as f:
+    json.dump(
+        {
+        "registry":components,
+        "generated":
+            datetime.now(timezone.utc).isoformat()
+        },
+        f,
+        indent=2
+    )
+
+
+with open(OUTPUT,"w") as f:
+    json.dump(
+        registry,
+        f,
+        indent=2
+    )
+
+
+print("")
+print("Generated:")
+print("orchestrator-registry.json")
+print("federation-capability-map.json")
+print("")
+print("Components discovered:",len(components))
+
+
+PY
+
+
+echo ""
+echo "Validating federation graph..."
+
+jq '.component_count' \
+"$REGISTRY/federation-capability-map.json"
+
+
+echo ""
+echo "========================================"
+echo " ✓ FEDERATION BOOTSTRAP COMPLETE"
+echo "========================================"
+
