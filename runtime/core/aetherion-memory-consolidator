@@ -1,0 +1,148 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+
+HISTORY="$REGISTRY/execution-history.json"
+CYCLES="$REGISTRY/cognitive-cycles.json"
+VALIDATION="$REGISTRY/validation-results.json"
+
+MEMORY="$REGISTRY/aetherion-memory.json"
+KNOWLEDGE="$REGISTRY/knowledge-registry.json"
+
+echo "========================================"
+echo " Aetherion Memory Consolidator"
+echo " Long Term Cognitive Memory Layer"
+echo "========================================"
+
+python3 <<PY
+
+import json
+import uuid
+from datetime import datetime, timezone
+
+
+def load(path, default):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except:
+        return default
+
+
+history=load("$HISTORY", {})
+cycles=load("$CYCLES", {})
+validation=load("$VALIDATION", {})
+
+memory=load("$MEMORY", {
+    "memories":[]
+})
+
+knowledge=load("$KNOWLEDGE", {
+    "knowledge_nodes":[]
+})
+
+
+timestamp=datetime.now(timezone.utc).isoformat()
+
+
+executions=len(
+    history.get("executions",[])
+)
+
+
+cycle_count=len(
+    cycles.get("cycles",[])
+)
+
+
+validations=len(
+    validation.get("results",[])
+)
+
+
+memory_entry={
+
+    "memory_id":str(uuid.uuid4()),
+
+    "timestamp":timestamp,
+
+    "type":"operational_experience",
+
+    "observations":[
+
+        {
+            "category":"execution",
+            "value":executions
+        },
+
+        {
+            "category":"cognitive_cycles",
+            "value":cycle_count
+        },
+
+        {
+            "category":"validation_events",
+            "value":validations
+        }
+
+    ],
+
+    "lessons":[
+
+        "Federation orchestration pipeline operational",
+
+        "Goal driven execution established",
+
+        "Validation feedback available"
+
+    ]
+
+}
+
+
+memory["memories"].append(memory_entry)
+
+
+knowledge["knowledge_nodes"].append({
+
+    "node_id":str(uuid.uuid4()),
+
+    "timestamp":timestamp,
+
+    "concept":"Aetherion operational maturity",
+
+    "facts":[
+
+        "Executive layer active",
+
+        "Autonomous scheduler active",
+
+        "Memory consolidation active"
+
+    ]
+
+})
+
+
+with open("$MEMORY","w") as f:
+    json.dump(memory,f,indent=2)
+
+
+with open("$KNOWLEDGE","w") as f:
+    json.dump(knowledge,f,indent=2)
+
+
+print("Generated:")
+print("aetherion-memory.json")
+print("knowledge-registry.json")
+
+print("")
+print("Memories:",len(memory["memories"]))
+print("Knowledge Nodes:",len(knowledge["knowledge_nodes"]))
+
+PY
+
+
+echo "========================================"
+echo " ✓ MEMORY CONSOLIDATION COMPLETE"
+echo "========================================"
