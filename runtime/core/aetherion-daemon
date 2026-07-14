@@ -1,0 +1,44 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+echo "========================================"
+echo " Aetherion Autonomous Daemon"
+echo " Federation Operating System"
+echo "========================================"
+
+ROOT="$HOME/AIFT/AIFT-Runtime"
+REGISTRY="$HOME/AIFT/registry"
+
+cd "$ROOT"
+
+while true
+do
+
+echo ""
+echo "[AETHERION] Starting cognitive cycle..."
+
+aetherion-meta
+
+echo ""
+echo "[AETHERION] Running learning optimization..."
+
+aetherion-learning-engine
+
+echo ""
+echo "[AETHERION] Updating knowledge graph..."
+
+aetherion-knowledge-graph
+
+echo ""
+echo "[AETHERION] System heartbeat..."
+
+aetherion-guardian
+
+echo ""
+echo "========================================"
+echo " AETHERION CYCLE COMPLETE"
+echo " Sleeping before next cycle"
+echo "========================================"
+
+sleep 300
+
+done
