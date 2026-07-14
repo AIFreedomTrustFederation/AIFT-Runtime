@@ -1,0 +1,86 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+OUTPUT="$REGISTRY/registry-health.json"
+
+echo "========================================"
+echo " Aetherion Registry Validator"
+echo " Registry Integrity Verification"
+echo "========================================"
+
+python3 <<PY
+import json
+import os
+from datetime import datetime, timezone
+
+registry = "$REGISTRY"
+
+required = [
+    "identity",
+    "timestamp",
+    "status"
+]
+
+results = []
+
+for filename in sorted(os.listdir(registry)):
+
+    if not filename.endswith(".json"):
+        continue
+
+    path = os.path.join(registry, filename)
+
+    report = {
+        "file": filename,
+        "valid_json": False,
+        "required_fields": {},
+        "status": "failed"
+    }
+
+    try:
+        with open(path) as f:
+            data = json.load(f)
+
+        report["valid_json"] = True
+
+        ok = True
+
+        for field in required:
+            exists = field in data
+            report["required_fields"][field] = exists
+            ok = ok and exists
+
+        report["status"] = "passed" if ok else "failed"
+
+    except Exception as e:
+        report["error"] = str(e)
+
+    results.append(report)
+
+summary = {
+    "identity": {
+        "name": "Aetherion",
+        "system": "Federated Cognitive Runtime"
+    },
+    "timestamp": datetime.now(timezone.utc).isoformat(),
+    "engine": "registry_validator",
+    "artifacts_checked": len(results),
+    "passed": sum(1 for r in results if r["status"] == "passed"),
+    "failed": sum(1 for r in results if r["status"] == "failed"),
+    "results": results,
+    "status": "registry_validation_complete"
+}
+
+with open("$OUTPUT","w") as f:
+    json.dump(summary, f, indent=2)
+
+print("Generated:")
+print("registry-health.json")
+print("Artifacts checked:", summary["artifacts_checked"])
+print("Passed:", summary["passed"])
+print("Failed:", summary["failed"])
+PY
+
+echo "========================================"
+echo " ✓ REGISTRY VALIDATION COMPLETE"
+echo "========================================"
