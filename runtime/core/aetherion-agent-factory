@@ -1,0 +1,121 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+AGENT_DIR="$REGISTRY/agents"
+
+mkdir -p "$AGENT_DIR"
+
+echo "========================================"
+echo " Aetherion Agent Factory"
+echo " Autonomous Agent Genesis Layer"
+echo "========================================"
+
+TASK_FILE="$REGISTRY/task-queue.json"
+
+if [ ! -f "$TASK_FILE" ]; then
+    echo "No task queue found."
+    exit 1
+fi
+
+python3 <<PY
+import json
+import uuid
+from datetime import datetime, timezone
+import os
+
+registry=os.path.expanduser("$REGISTRY")
+agent_dir=os.path.expanduser("$AGENT_DIR")
+
+with open("$TASK_FILE") as f:
+    data=json.load(f)
+
+tasks=data.get("tasks",[])
+
+agents=[]
+
+for task in tasks:
+
+    objective=task.get("objective","Unknown Task").lower()
+
+    if "code" in objective or "workflow" in objective:
+        role="development_agent"
+        capabilities=[
+            "code_generation",
+            "repository_analysis",
+            "workflow_creation"
+        ]
+
+    elif "memory" in objective:
+        role="memory_agent"
+        capabilities=[
+            "knowledge_consolidation",
+            "memory_analysis"
+        ]
+
+    elif "security" in objective:
+        role="security_agent"
+        capabilities=[
+            "security_analysis",
+            "validation"
+        ]
+
+    elif "business" in objective:
+        role="business_agent"
+        capabilities=[
+            "planning",
+            "market_analysis"
+        ]
+
+    else:
+        role="general_reasoning_agent"
+        capabilities=[
+            "analysis",
+            "routing",
+            "execution"
+        ]
+
+
+    agent_id="agent_"+str(uuid.uuid4())
+
+    agent={
+        "agent_id":agent_id,
+        "created":datetime.now(timezone.utc).isoformat(),
+        "role":role,
+        "objective":task.get("objective"),
+        "goal_id":task.get("goal_id"),
+        "capabilities":capabilities,
+        "status":"initialized",
+        "runtime":"Aetherion"
+    }
+
+    with open(agent_dir+"/"+agent_id+".json","w") as f:
+        json.dump(agent,f,indent=2)
+
+    agents.append(agent)
+
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "engine":"agent_factory_active",
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "agents_created":len(agents),
+    "agents":agents,
+    "status":"agent_generation_complete"
+}
+
+with open(registry+"/agent-registry.json","w") as f:
+    json.dump(output,f,indent=2)
+
+print("Generated:")
+print("agent-registry.json")
+print("Agents:",len(agents))
+
+PY
+
+echo ""
+echo "========================================"
+echo " ✓ AGENT FACTORY COMPLETE"
+echo "========================================"
