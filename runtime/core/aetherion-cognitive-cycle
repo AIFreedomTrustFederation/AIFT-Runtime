@@ -1,0 +1,75 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+
+echo "========================================"
+echo " Aetherion Cognitive Cycle Controller"
+echo " Continuous Intelligence Loop"
+echo "========================================"
+
+echo ""
+
+echo "[1] Supervising current state..."
+./runtime/core/aetherion-cognitive-supervisor
+
+echo ""
+
+echo "[2] Loading goals..."
+./runtime/core/aetherion-goal-engine
+
+echo ""
+
+echo "[3] Scheduling objectives..."
+./runtime/core/aetherion-autonomous-scheduler
+
+echo ""
+
+echo "[4] Consolidating memory..."
+./runtime/core/aetherion-memory-consolidator
+
+echo ""
+
+echo "[5] Running federation decision engine..."
+./runtime/core/aetherion "Execute highest priority cognitive task"
+
+echo ""
+
+python3 <<PY
+import json
+from datetime import datetime, timezone
+
+state={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "cycle":{
+        "timestamp":datetime.now(timezone.utc).isoformat(),
+        "mode":"continuous_cognitive_operation"
+    },
+    "pipeline":[
+        "observe",
+        "remember",
+        "evaluate",
+        "goal_selection",
+        "scheduling",
+        "orchestration",
+        "execution",
+        "validation",
+        "memory_consolidation"
+    ],
+    "status":"cycle_complete"
+}
+
+with open("$REGISTRY/aetherion-cycle-state.json","w") as f:
+    json.dump(state,f,indent=2)
+
+print("")
+print("Generated:")
+print("aetherion-cycle-state.json")
+PY
+
+echo ""
+echo "========================================"
+echo " ✓ AETHERION COGNITIVE CYCLE COMPLETE"
+echo "========================================"
