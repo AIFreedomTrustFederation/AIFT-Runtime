@@ -3,71 +3,45 @@
 REGISTRY="$HOME/AIFT/registry"
 
 INPUT="$REGISTRY/orchestration-runtime-result.json"
-MAP="$REGISTRY/orchestrator-control-map.json"
 OUTPUT="$REGISTRY/execution-history.json"
 
 echo "========================================"
 echo " Aetherion Federation Executor"
-echo " Authorized Execution Layer"
+echo " Hardened Execution Layer"
 echo "========================================"
 
 python3 <<PY
 import json
 import uuid
-import subprocess
 from datetime import datetime, timezone
 
 with open("$INPUT") as f:
     plan=json.load(f)
 
-with open("$MAP") as f:
-    control=json.load(f)
-
 trace=str(uuid.uuid4())
 
 authorized=plan.get("execution",{}).get("authorized",False)
 
-objective=plan.get("objective","unknown")
-
-repository=plan.get("routing",{}).get("repository")
-
-action=plan.get("decision",{}).get("action")
-
-
-if not authorized:
-    result={
-        "trace_id":trace,
-        "timestamp":datetime.now(timezone.utc).isoformat(),
-        "objective":objective,
-        "repository":repository,
-        "status":"blocked",
-        "reason":"authorization_required"
-    }
-
-else:
-
-    result={
-        "trace_id":trace,
-        "timestamp":datetime.now(timezone.utc).isoformat(),
-        "objective":objective,
-        "repository":repository,
-        "action":action,
-        "execution":{
-            "started":True,
-            "executor":"aetherion-federation-executor"
-        },
-        "validation":{
-            "required":plan.get("decision",{}).get("validation_required",True),
-            "rollback_ready":plan.get("decision",{}).get("rollback_required",True)
-        },
-        "status":"execution_completed"
-    }
-
+result={
+    "trace_id":trace,
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "objective":plan.get("objective","unknown"),
+    "repository":plan.get("routing",{}).get("repository"),
+    "action":plan.get("decision",{}).get("action"),
+    "status":"execution_completed" if authorized else "blocked",
+    "validation_required":plan.get("decision",{}).get("validation_required",True),
+    "rollback_required":plan.get("decision",{}).get("rollback_required",True)
+}
 
 try:
     with open("$OUTPUT") as f:
         history=json.load(f)
 except:
+    history={}
+
+
+# Repair legacy formats
+if not isinstance(history, dict):
     history={
         "identity":{
             "name":"Aetherion",
@@ -76,19 +50,20 @@ except:
         "executions":[]
     }
 
+if "executions" not in history or not isinstance(history["executions"], list):
+    history["executions"]=[]
+
 
 history["executions"].append(result)
 
 history["last_execution"]=datetime.now(timezone.utc).isoformat()
 
-
 with open("$OUTPUT","w") as f:
     json.dump(history,f,indent=2)
 
-
-print("Execution recorded:")
-print(result["status"])
-print("Repository:",repository)
+print("Execution recorded")
+print("Status:",result["status"])
+print("Trace:",trace)
 
 PY
 
