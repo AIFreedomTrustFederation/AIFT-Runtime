@@ -1,0 +1,132 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+
+GOALS="$REGISTRY/goals.json"
+QUEUE="$REGISTRY/task-queue.json"
+CYCLES="$REGISTRY/cognitive-cycles.json"
+
+echo "========================================"
+echo " Aetherion Autonomous Scheduler"
+echo " Cognitive Cycle Management Layer"
+echo "========================================"
+
+python3 <<PY
+
+import json
+import uuid
+from datetime import datetime, timezone
+
+
+def load(path, default):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except:
+        return default
+
+
+goals=load("$GOALS", {"goals":[]})
+
+queue=load("$QUEUE", {
+    "tasks":[]
+})
+
+cycles=load("$CYCLES", {
+    "cycles":[]
+})
+
+
+timestamp=datetime.now(timezone.utc).isoformat()
+trace=str(uuid.uuid4())
+
+
+tasks=[]
+
+
+for goal in sorted(
+    goals.get("goals",[]),
+    key=lambda x:x.get("priority",99)
+):
+
+    if goal.get("status") in ["active","planned"]:
+
+        tasks.append({
+
+            "task_id":str(uuid.uuid4()),
+
+            "objective":goal["name"],
+
+            "goal_id":goal["id"],
+
+            "priority":goal["priority"],
+
+            "status":"queued",
+
+            "routing":
+            {
+                "target":
+                "federation_orchestrator"
+            },
+
+            "created":timestamp
+
+        })
+
+
+queue={
+
+"identity":
+{
+"name":"Aetherion",
+"system":"Federated Cognitive Runtime"
+},
+
+"timestamp":timestamp,
+
+"engine":"autonomous_scheduler_active",
+
+"task_count":len(tasks),
+
+"tasks":tasks,
+
+"status":"task_queue_generated"
+
+}
+
+
+cycles["cycles"].append({
+
+"trace_id":trace,
+
+"timestamp":timestamp,
+
+"event":"cognitive_cycle",
+
+"tasks_generated":len(tasks),
+
+"status":"completed"
+
+})
+
+
+with open("$QUEUE","w") as f:
+    json.dump(queue,f,indent=2)
+
+
+with open("$CYCLES","w") as f:
+    json.dump(cycles,f,indent=2)
+
+
+print("Generated:")
+print("task-queue.json")
+print("cognitive-cycles.json")
+print("")
+print("Tasks:",len(tasks))
+
+PY
+
+
+echo "========================================"
+echo " ✓ AUTONOMOUS SCHEDULER COMPLETE"
+echo "========================================"
