@@ -1,0 +1,116 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+WORKSPACE="$HOME/AIFT"
+REGISTRY="$HOME/AIFT/registry"
+
+OUTPUT="$REGISTRY/orchestrator-discovery.json"
+
+echo "========================================"
+echo " Aetherion Orchestrator Discovery"
+echo " Federation Capability Scan"
+echo "========================================"
+
+python3 <<PY
+import os
+import json
+from datetime import datetime, timezone
+
+workspace="$WORKSPACE"
+
+keywords=[
+    "orchestrator",
+    "router",
+    "agent",
+    "scheduler",
+    "workflow",
+    "pipeline",
+    "dispatcher",
+    "executor",
+    "runtime",
+    "engine",
+    "governance",
+    "automation"
+]
+
+matches=[]
+
+for root,dirs,files in os.walk(workspace):
+
+    # skip heavy/generated folders
+    dirs[:]=[
+        d for d in dirs
+        if d not in [
+            ".git",
+            "node_modules",
+            "__pycache__",
+            ".venv"
+        ]
+    ]
+
+    for file in files:
+
+        path=os.path.join(root,file)
+
+        lower=file.lower()
+
+        score=0
+        found=[]
+
+        for word in keywords:
+            if word in lower:
+                score+=1
+                found.append(word)
+
+        if score:
+            matches.append({
+                "file":path.replace(workspace,"~ /AIFT"),
+                "score":score,
+                "keywords":found
+            })
+
+
+matches.sort(
+    key=lambda x:x["score"],
+    reverse=True
+)
+
+
+repos=[]
+
+for item in os.listdir(workspace):
+    path=os.path.join(workspace,item)
+    if os.path.isdir(path):
+        if os.path.exists(os.path.join(path,".git")):
+            repos.append(item)
+
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "engine":"orchestrator_discovery",
+    "workspace":workspace,
+    "repositories_found":len(repos),
+    "repositories":repos,
+    "orchestration_candidates":matches[:200],
+    "candidate_count":len(matches),
+    "status":"discovery_complete"
+}
+
+
+with open("$OUTPUT","w") as f:
+    json.dump(output,f,indent=2)
+
+
+print("Repositories:",len(repos))
+print("Candidates:",len(matches))
+print("Generated:")
+print("$OUTPUT")
+
+PY
+
+echo "========================================"
+echo " ✓ ORCHESTRATOR DISCOVERY COMPLETE"
+echo "========================================"
