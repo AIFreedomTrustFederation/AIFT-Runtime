@@ -1,0 +1,210 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+set -e
+
+ROOT="$HOME/AIFT"
+RUNTIME="$ROOT/AIFT-Runtime/runtime/core"
+REGISTRY="$ROOT/registry"
+
+OBJECTIVE="$*"
+
+if [ -z "$OBJECTIVE" ]; then
+    echo "Usage:"
+    echo "  aetherion <objective>"
+    echo ""
+    echo "Examples:"
+    echo "  aetherion Analyze federation health"
+    echo "  aetherion Create a workflow agent"
+    exit 1
+fi
+
+
+echo "========================================"
+echo " AETHERION EXECUTIVE INTERFACE"
+echo " Federated Cognitive Runtime"
+echo "========================================"
+
+
+mkdir -p "$REGISTRY"
+
+
+TRACE_ID=$(python3 - <<PY
+import uuid
+print(uuid.uuid4())
+PY
+)
+
+
+echo ""
+echo "Objective:"
+echo "$OBJECTIVE"
+
+echo ""
+echo "Trace:"
+echo "$TRACE_ID"
+
+
+########################################
+# 1. INTENT CLASSIFICATION
+########################################
+
+python3 <<PY
+import json
+from datetime import datetime, timezone
+
+objective="""$OBJECTIVE"""
+
+keywords={
+"architecture":["architecture","system","design"],
+"workflow":["workflow","pipeline","automation"],
+"analysis":["analyze","audit","inspect"],
+"creation":["create","build","generate"],
+"improvement":["improve","upgrade","optimize"]
+}
+
+intent="general"
+
+for key,words in keywords.items():
+    if any(w in objective.lower() for w in words):
+        intent=key
+        break
+
+
+with open("$REGISTRY/aetherion-intent.json","w") as f:
+    json.dump(
+    {
+    "objective":objective,
+    "intent":intent,
+    "timestamp":datetime.now(timezone.utc).isoformat()
+    },
+    f,
+    indent=2
+    )
+
+print("Intent:",intent)
+
+PY
+
+
+########################################
+# 2. FEDERATION ROUTING
+########################################
+
+if [ -x "$RUNTIME/aetherion-federation-orchestrator" ]; then
+
+    echo ""
+    echo "Routing through federation orchestrator..."
+
+    "$RUNTIME/aetherion-federation-orchestrator" \
+        "$OBJECTIVE"
+
+else
+
+    echo "Federation orchestrator unavailable"
+fi
+
+
+
+########################################
+# 3. AUTONOMY DECISION
+########################################
+
+if [ -x "$RUNTIME/aetherion-autonomy-policy-engine" ]; then
+
+    echo ""
+    echo "Applying autonomy policy..."
+
+    "$RUNTIME/aetherion-autonomy-policy-engine"
+
+fi
+
+
+
+########################################
+# 4. EXECUTION
+########################################
+
+if [ -x "$RUNTIME/aetherion-orchestration-runtime" ]; then
+
+    echo ""
+    echo "Creating execution decision..."
+
+    "$RUNTIME/aetherion-orchestration-runtime"
+
+fi
+
+
+if [ -x "$RUNTIME/aetherion-federation-executor" ]; then
+
+    echo ""
+    echo "Executing authorized actions..."
+
+    "$RUNTIME/aetherion-federation-executor"
+
+fi
+
+
+
+########################################
+# 5. VALIDATION
+########################################
+
+if [ -x "$RUNTIME/aetherion-validation-engine" ]; then
+
+    echo ""
+    echo "Validating execution..."
+
+    "$RUNTIME/aetherion-validation-engine"
+
+fi
+
+
+
+########################################
+# 6. FINAL STATE RECORD
+########################################
+
+python3 <<PY
+
+import json
+from datetime import datetime,timezone
+
+state={
+"identity":{
+"name":"Aetherion",
+"system":"Federated Cognitive Runtime"
+},
+
+"trace_id":"$TRACE_ID",
+
+"objective":"$OBJECTIVE",
+
+"status":"complete",
+
+"timestamp":
+datetime.now(timezone.utc).isoformat(),
+
+"layers":{
+"executive":"AIFT-Runtime",
+"workflow":"AIFT-Forge",
+"system":"AIFT-OS",
+"pipeline":"OpenMontage"
+}
+
+}
+
+
+with open("$REGISTRY/aetherion-state.json","w") as f:
+    json.dump(state,f,indent=2)
+
+print("")
+print("Generated:")
+print("aetherion-state.json")
+
+PY
+
+
+echo ""
+echo "========================================"
+echo " ✓ AETHERION EXECUTION COMPLETE"
+echo "========================================"
