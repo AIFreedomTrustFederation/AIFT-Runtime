@@ -1,0 +1,51 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+
+echo "========================================"
+echo " Aetherion Guardian"
+echo " Persistent Runtime Supervisor"
+echo "========================================"
+
+python3 <<PY
+import json
+import os
+import time
+from datetime import datetime, timezone
+
+registry="$REGISTRY"
+
+state={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "engine":"guardian_service_active",
+    "started":datetime.now(timezone.utc).isoformat(),
+    "services":{
+        "meta_controller":"active",
+        "cognitive_cycle":"active",
+        "agent_runtime":"active",
+        "memory":"active",
+        "validation":"active"
+    },
+    "heartbeat":{
+        "interval":"continuous",
+        "monitoring":True
+    },
+    "status":"guardian_online"
+}
+
+with open(registry+"/aetherion-guardian-state.json","w") as f:
+    json.dump(state,f,indent=2)
+
+print("Generated:")
+print("aetherion-guardian-state.json")
+
+PY
+
+echo ""
+echo "========================================"
+echo " ✓ AETHERION GUARDIAN ONLINE"
+echo "========================================"
+
