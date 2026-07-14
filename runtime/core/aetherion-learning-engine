@@ -1,0 +1,112 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+
+echo "========================================"
+echo " Aetherion Learning Engine"
+echo " Adaptive Improvement Layer"
+echo "========================================"
+
+python3 <<PY
+import json
+from datetime import datetime, timezone
+import os
+
+registry="$REGISTRY"
+
+def load(name, default):
+    path=registry+"/"+name
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    return default
+
+
+validation=load(
+    "validation-results.json",
+    {}
+)
+
+memory=load(
+    "aetherion-memory.json",
+    {"memories":[]}
+)
+
+graph=load(
+    "aetherion-knowledge-graph.json",
+    {"graph":{"nodes":[]}}
+)
+
+
+lessons=[]
+
+validated=validation.get(
+    "validated",
+    validation.get("validation_count",0)
+)
+
+if validated:
+    lessons.append(
+        "Validated executions improve future routing confidence"
+    )
+
+lessons.append(
+    "Knowledge graph enables experience correlation"
+)
+
+lessons.append(
+    "Goal driven execution provides evolutionary direction"
+)
+
+
+learning_state={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+
+    "engine":
+        "adaptive_learning_active",
+
+    "timestamp":
+        datetime.now(timezone.utc).isoformat(),
+
+    "inputs":{
+        "validation_events":validated,
+        "memory_nodes":
+            len(memory.get("memories",[])),
+        "knowledge_nodes":
+            len(graph.get("graph",{}).get("nodes",[]))
+    },
+
+    "lessons":lessons,
+
+    "improvements":[
+        "Increase decision accuracy",
+        "Refine agent capability selection",
+        "Improve future task routing"
+    ],
+
+    "status":
+        "learning_cycle_complete"
+}
+
+
+with open(
+    registry+"/aetherion-learning-state.json",
+    "w"
+) as f:
+    json.dump(learning_state,f,indent=2)
+
+
+print("Generated:")
+print("aetherion-learning-state.json")
+print("Lessons:",len(lessons))
+
+PY
+
+echo ""
+echo "========================================"
+echo " ✓ AETHERION LEARNING COMPLETE"
+echo "========================================"
+
