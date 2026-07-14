@@ -1,0 +1,60 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+REGISTRY="$HOME/AIFT/registry"
+
+echo "========================================"
+echo " Aetherion API Gateway"
+echo " External Federation Interface"
+echo "========================================"
+
+python3 <<PY
+import json
+from datetime import datetime, timezone
+
+state={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "engine":"api_gateway_active",
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+
+    "interface":{
+        "protocol":"HTTP",
+        "status":"ready",
+        "endpoint":"localhost",
+        "port":8080
+    },
+
+    "available_operations":[
+        "submit_objective",
+        "query_state",
+        "retrieve_memory",
+        "execute_workflow",
+        "validate_execution"
+    ],
+
+    "connected_layers":[
+        "guardian",
+        "meta_controller",
+        "orchestrator",
+        "agent_runtime",
+        "memory"
+    ],
+
+    "status":"gateway_initialized"
+}
+
+with open("$REGISTRY/aetherion-api-state.json","w") as f:
+    json.dump(state,f,indent=2)
+
+print("Generated:")
+print("aetherion-api-state.json")
+
+PY
+
+echo ""
+echo "========================================"
+echo " ✓ AETHERION API GATEWAY READY"
+echo "========================================"
+
