@@ -1,0 +1,132 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+WORKSPACE="$HOME/AIFT"
+REGISTRY="$HOME/AIFT/registry"
+
+OUTPUT="$REGISTRY/orchestrator-label-scan.json"
+
+echo "========================================"
+echo " Aetherion Orchestrator Label Scanner"
+echo " Exact Orchestrator Discovery"
+echo "========================================"
+
+python3 <<PY
+import os
+import json
+from datetime import datetime, timezone
+
+workspace="$WORKSPACE"
+
+matches=[]
+
+terms=[
+    "orchestrator",
+    "orchestration",
+    "orchestrate"
+]
+
+for root, dirs, files in os.walk(workspace):
+
+    dirs[:]=[
+        d for d in dirs
+        if d not in [
+            ".git",
+            "node_modules",
+            "__pycache__",
+            ".venv"
+        ]
+    ]
+
+    for name in dirs + files:
+
+        lower=name.lower()
+
+        if any(term in lower for term in terms):
+
+            path=os.path.join(root,name)
+
+            matches.append({
+                "path":path.replace(workspace,"~/AIFT"),
+                "type":"directory" if os.path.isdir(path) else "file",
+                "matched_terms":[
+                    t for t in terms if t in lower
+                ]
+            })
+
+
+# Also scan file contents for explicit labels
+content_matches=[]
+
+for root, dirs, files in os.walk(workspace):
+
+    dirs[:]=[
+        d for d in dirs
+        if d not in [
+            ".git",
+            "node_modules",
+            "__pycache__",
+            ".venv"
+        ]
+    ]
+
+    for file in files:
+
+        if not file.endswith((
+            ".md",
+            ".json",
+            ".sh",
+            ".py",
+            ".js",
+            ".mjs",
+            ".ts"
+        )):
+            continue
+
+        path=os.path.join(root,file)
+
+        try:
+            with open(path,errors="ignore") as f:
+                text=f.read().lower()
+
+            if "orchestrator" in text or "orchestration" in text:
+
+                content_matches.append({
+                    "path":path.replace(workspace,"~/AIFT"),
+                    "matches":[
+                        t for t in terms if t in text
+                    ]
+                })
+
+        except:
+            pass
+
+
+output={
+    "identity":{
+        "name":"Aetherion",
+        "system":"Federated Cognitive Runtime"
+    },
+    "timestamp":datetime.now(timezone.utc).isoformat(),
+    "engine":"orchestrator_label_scanner",
+    "name_matches":matches,
+    "content_matches":content_matches,
+    "name_match_count":len(matches),
+    "content_match_count":len(content_matches),
+    "status":"scan_complete"
+}
+
+
+with open("$OUTPUT","w") as f:
+    json.dump(output,f,indent=2)
+
+
+print("Name matches:",len(matches))
+print("Content matches:",len(content_matches))
+print("Generated:")
+print("$OUTPUT")
+
+PY
+
+echo "========================================"
+echo " ✓ ORCHESTRATOR LABEL SCAN COMPLETE"
+echo "========================================"
