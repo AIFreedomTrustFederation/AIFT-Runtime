@@ -1,0 +1,47 @@
+{
+  "schema": "aift.capabilities.v1",
+  "repository": "AIFT-Runtime",
+  "capabilities": [
+    {
+      "name": "runtime.verify",
+      "status": "ready",
+      "description": "Verifies the model, llama.cpp server, runtime files, process and local API.",
+      "command": "./verify-aetherion-runtime.sh",
+      "evidence": "Verification completes with FAILED: 0"
+    },
+    {
+      "name": "runtime.health",
+      "status": "ready",
+      "description": "Reports Git, model and local inference service health.",
+      "command": "./health.sh",
+      "evidence": "Local llama.cpp endpoint responds on 127.0.0.1:8080"
+    },
+    {
+      "name": "runtime.bootstrap",
+      "status": "ready",
+      "description": "Retrieves Git LFS model assets and starts the local Aetherion runtime.",
+      "command": "./bootstrap.sh",
+      "evidence": "Model is present and runtime startup succeeds"
+    },
+    {
+      "name": "repository.awareness",
+      "status": "ready",
+      "description": "Audits the local AIFT repository federation.",
+      "command": "./audit-repository-awareness.sh",
+      "evidence": "Repository awareness audit completes successfully"
+    },
+    {
+      "name": "governed.improvement-loop",
+      "status": "planned",
+      "description": "Runs the governed Aetherion improvement architecture.",
+      "command": "./runtime/core/aetherion-improvement-loop",
+      "evidence": "Requires full snapshot, approval, rollback and post-validation integration"
+    },
+    {
+      "name": "governed.execution",
+      "status": "planned",
+      "description": "Controlled capability execution through approval and policy layers.",
+      "evidence": "Must remain non-executable from MoBox UXI until supervised job controls exist"
+    }
+  ]
+}
