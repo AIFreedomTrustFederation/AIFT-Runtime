@@ -1,0 +1,25 @@
+{
+  "schema": "https://aifreedomtrust.org/schemas/aift.repo.schema.json",
+  "name": "AIFT-Runtime",
+  "layer": "runtime",
+  "role": "local runtime intelligence, repository awareness, graph, health, governed synchronization, and execution services",
+  "federation": {
+    "workspace": "AIFT",
+    "controlPlane": "AIFT-OS",
+    "doctrine": "AI-Freedom-Trust/SOP-ALOHA-001.md"
+  },
+  "commands": {
+    "health": "./health.sh",
+    "bootstrap": "./bootstrap.sh",
+    "verify": "./runtime/verify.sh",
+    "doctor": "./runtime/doctor.sh",
+    "status": "./runtime/status.sh"
+  },
+  "standards": {
+    "localFirst": true,
+    "inspectable": true,
+    "sovereignByDefault": true,
+    "aiBehindProviderInterfaces": true,
+    "verifyBeforeMutation": true
+  }
+}
