@@ -35,6 +35,10 @@
         {
           "name": "Validate tracked runtime sources",
           "run": "bash qa-local.sh"
+        },
+        {
+          "name": "Confirm validation leaves checkout clean",
+          "run": "test -z \"$(git status --porcelain)\""
         }
       ]
     }
