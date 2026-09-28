@@ -4,7 +4,12 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
-mapfile -d '' shell_files < <(git ls-files -z '*.sh')
+mapfile -d '' shell_files < <(
+  {
+    git ls-files -z '*.sh'
+    git grep -Ilz '^#!.*bash' --
+  } | sort -zu
+)
 mapfile -d '' python_files < <(git ls-files -z '*.py')
 mapfile -d '' tracked_runtime_state < <(git ls-files -z '*.pid' '*.log')
 
