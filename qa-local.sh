@@ -12,6 +12,7 @@ mapfile -d '' shell_files < <(
 )
 mapfile -d '' python_files < <(git ls-files -z '*.py')
 mapfile -d '' json_files < <(git ls-files -z '*.json')
+mapfile -d '' model_files < <(git ls-files -z '*.gguf')
 mapfile -d '' tracked_runtime_state < <(git ls-files -z '*.pid' '*.log')
 mapfile -d '' tracked_backup_files < <(
   git ls-files -z '*.bak' '*.backup' '*.backup.*' '*.orig' '*~'
@@ -29,6 +30,11 @@ fi
 
 if ((${#json_files[@]} == 0)); then
   echo "No tracked JSON documents found" >&2
+  exit 1
+fi
+
+if ((${#model_files[@]} == 0)); then
+  echo "No tracked GGUF model pointers found" >&2
   exit 1
 fi
 
@@ -79,5 +85,22 @@ with open(sys.argv[1], encoding="utf-8") as source:
 PY
 done
 
-printf 'Validated %d shell scripts, %d Python sources, and %d JSON documents.\n' \
-  "${#shell_files[@]}" "${#python_files[@]}" "${#json_files[@]}"
+for file in "${model_files[@]}"; do
+  if [[ "$(git check-attr filter -- "$file")" != *': lfs' ]]; then
+    printf 'GGUF model is not assigned to Git LFS: %s\n' "$file" >&2
+    exit 1
+  fi
+
+  mapfile -t pointer < <(git show "HEAD:$file")
+  if ((${#pointer[@]} != 3)) ||
+    [[ "${pointer[0]}" != 'version https://git-lfs.github.com/spec/v1' ]] ||
+    [[ ! "${pointer[1]}" =~ ^oid\ sha256:[0-9a-f]{64}$ ]] ||
+    [[ ! "${pointer[2]}" =~ ^size\ [1-9][0-9]*$ ]]; then
+    printf 'Invalid Git LFS pointer for GGUF model: %s\n' "$file" >&2
+    exit 1
+  fi
+done
+
+printf 'Validated %d shell scripts, %d Python sources, %d JSON documents, and %d model pointers.\n' \
+  "${#shell_files[@]}" "${#python_files[@]}" "${#json_files[@]}" \
+  "${#model_files[@]}"
