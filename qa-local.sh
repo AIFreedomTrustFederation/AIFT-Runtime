@@ -13,6 +13,9 @@ mapfile -d '' shell_files < <(
 mapfile -d '' python_files < <(git ls-files -z '*.py')
 mapfile -d '' json_files < <(git ls-files -z '*.json')
 mapfile -d '' tracked_runtime_state < <(git ls-files -z '*.pid' '*.log')
+mapfile -d '' tracked_backup_files < <(
+  git ls-files -z '*.bak' '*.backup' '*.backup.*' '*.orig' '*~'
+)
 
 if ((${#shell_files[@]} == 0)); then
   echo "No tracked shell scripts found" >&2
@@ -32,6 +35,12 @@ fi
 if ((${#tracked_runtime_state[@]} != 0)); then
   printf 'Machine-local runtime state must not be tracked:\n' >&2
   printf '  %s\n' "${tracked_runtime_state[@]}" >&2
+  exit 1
+fi
+
+if ((${#tracked_backup_files[@]} != 0)); then
+  printf 'Generated backup files must not be tracked:\n' >&2
+  printf '  %s\n' "${tracked_backup_files[@]}" >&2
   exit 1
 fi
 
