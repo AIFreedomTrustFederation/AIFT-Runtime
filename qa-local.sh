@@ -51,7 +51,23 @@ trap 'rm -rf "$cache_dir"' EXIT
 PYTHONPYCACHEPREFIX="$cache_dir" python3 -m py_compile "${python_files[@]}"
 
 for file in "${json_files[@]}"; do
-  python3 -m json.tool "$file" >/dev/null
+  python3 - "$file" <<'PY'
+import json
+import sys
+
+
+def reject_duplicate_keys(pairs):
+    document = {}
+    for key, value in pairs:
+        if key in document:
+            raise ValueError(f"duplicate JSON key: {key!r}")
+        document[key] = value
+    return document
+
+
+with open(sys.argv[1], encoding="utf-8") as source:
+    json.load(source, object_pairs_hook=reject_duplicate_keys)
+PY
 done
 
 printf 'Validated %d shell scripts, %d Python sources, and %d JSON documents.\n' \
