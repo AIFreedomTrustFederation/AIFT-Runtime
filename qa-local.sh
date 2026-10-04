@@ -11,6 +11,7 @@ mapfile -d '' shell_files < <(
   } | sort -zu
 )
 mapfile -d '' python_files < <(git ls-files -z '*.py')
+mapfile -d '' json_files < <(git ls-files -z '*.json')
 mapfile -d '' tracked_runtime_state < <(git ls-files -z '*.pid' '*.log')
 
 if ((${#shell_files[@]} == 0)); then
@@ -20,6 +21,11 @@ fi
 
 if ((${#python_files[@]} == 0)); then
   echo "No tracked Python sources found" >&2
+  exit 1
+fi
+
+if ((${#json_files[@]} == 0)); then
+  echo "No tracked JSON documents found" >&2
   exit 1
 fi
 
@@ -44,5 +50,9 @@ cache_dir="$(mktemp -d)"
 trap 'rm -rf "$cache_dir"' EXIT
 PYTHONPYCACHEPREFIX="$cache_dir" python3 -m py_compile "${python_files[@]}"
 
-printf 'Validated %d shell scripts and %d Python sources.\n' \
-  "${#shell_files[@]}" "${#python_files[@]}"
+for file in "${json_files[@]}"; do
+  python3 -m json.tool "$file" >/dev/null
+done
+
+printf 'Validated %d shell scripts, %d Python sources, and %d JSON documents.\n' \
+  "${#shell_files[@]}" "${#python_files[@]}" "${#json_files[@]}"
