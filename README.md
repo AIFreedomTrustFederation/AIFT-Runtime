@@ -59,6 +59,20 @@ Receive → Inspect → Name → Propose → Consent → Act → Verify → Reco
 
 **Receive** accepts a requested local operation or federation query. **Inspect** reads the actual environment, repository awareness, health, and state before mutation. **Name** identifies the repository, command, risk, dependencies, and expected result. **Propose** describes the operation when judgment or risk is involved. **Consent** is required when the command exceeds delegated synchronization, verification, or low-risk execution boundaries. **Act** calls the real local operation. **Verify** checks the resulting runtime and repository state. **Record** leaves inspectable output, graph/state information, or Git evidence appropriate to the action. **Return** sends the result back to AIFT-OS or the human operator without converting uncertainty into success.
 
+### Execution prerequisites and verification limits
+
+The checked-in scripts currently have two distinct invocation styles. `bootstrap.sh` and `health.sh` contain top-level commands and are intended to run from the repository root in a Termux environment. Bootstrap requires `git-lfs`, pulls LFS objects, checks for `runtime/ai/models/aetherion.gguf`, and invokes `runtime/ai/start.sh` only if it is executable. Health prints Git/LFS/model information and queries the local `127.0.0.1:8080/health` endpoint; its output is diagnostic, not proof of service readiness.
+
+By contrast, `runtime/doctor.sh`, `runtime/status.sh`, and `runtime/verify.sh` **define shell functions** (`aift_doctor`, `aift_status`, and `aift_verify`) rather than invoking them automatically. They source `$HOME/AIFT/runtime/common.sh`, so that workspace file and its helpers must exist. Run these functions from a configured workspace, for example:
+
+```bash
+source ./runtime/doctor.sh && aift_doctor
+source ./runtime/status.sh && aift_status
+source ./runtime/verify.sh && aift_verify
+```
+
+`aift_verify` writes to `$AIFT_REPORTS/verify-report.md` and attempts available Node, Cargo, or Go checks across discovered repositories. Its current commands use `|| true`, so a generated report or zero exit status **does not establish that tests passed**; inspect the actual check output before claiming validation. This documents the present script behavior, not a claim that the complete runtime has been exercised on a device.
+
 Primary entry points are intentionally simple:
 
 ```bash
