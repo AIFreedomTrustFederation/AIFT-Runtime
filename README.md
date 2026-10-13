@@ -71,7 +71,7 @@ source ./runtime/status.sh && aift_status
 source ./runtime/verify.sh && aift_verify
 ```
 
-`aift_verify` writes to `$AIFT_REPORTS/verify-report.md` and attempts available Node, Cargo, or Go checks across discovered repositories. Its current commands use `|| true`, so a generated report or zero exit status **does not establish that tests passed**; inspect the actual check output before claiming validation. This documents the present script behavior, not a claim that the complete runtime has been exercised on a device.
+`aift_verify` writes to `$AIFT_REPORTS/verify-report.md`, runs available Node, Cargo, or Go checks across discovered repositories, and returns a nonzero exit status if a required tool or executed check fails (or no repositories are found). It records check outcomes in the report while continuing through other repositories. Node commands retain `--if-present`: an absent npm script is skipped, **not proven to pass**, and repositories without a recognized build system receive only a Git status check. These checks do not establish that the complete runtime has been exercised on a device.
 
 Primary entry points are intentionally simple:
 

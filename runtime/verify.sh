@@ -3,44 +3,65 @@ source "$HOME/AIFT/runtime/common.sh"
 
 aift_verify() {
   local report="$AIFT_REPORTS/verify-report.md"
+  local p name check failures=0 checked=0
 
-  echo "# AIFT Verify Report" > "$report"
-  echo >> "$report"
-  echo "Generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$report"
-  echo >> "$report"
+  {
+    printf '# AIFT Verify Report\n\n'
+    printf 'Generated: %s\n\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+  } > "$report" || return 1
 
-  for p in $(repo_paths); do
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    checked=$((checked + 1))
     name="$(repo_name "$p")"
 
-    echo
-    echo "======================================"
-    echo "Verifying $name"
-    echo "======================================"
+    printf '\n======================================\nVerifying %s\n======================================\n' "$name"
+    printf '## %s\n\n' "$name" >> "$report"
 
-    cd "$p"
-    echo "## $name" >> "$report"
-    echo >> "$report"
-
-    if [ -f package.json ] && command -v npm >/dev/null 2>&1; then
-      npm run lint --if-present || true
-      npm run typecheck --if-present || true
-      npm run test --if-present || true
-      npm run build --if-present || true
-      echo "- Node checks attempted" >> "$report"
-    elif [ -f Cargo.toml ] && command -v cargo >/dev/null 2>&1; then
-      cargo check || true
-      echo "- Cargo check attempted" >> "$report"
-    elif [ -f go.mod ] && command -v go >/dev/null 2>&1; then
-      go test ./... || true
-      echo "- Go tests attempted" >> "$report"
+    if [ -f "$p/package.json" ]; then
+      if ! command -v npm >/dev/null 2>&1; then
+        printf '%s\n' '- FAIL: npm unavailable for Node project' >> "$report"
+        failures=$((failures + 1))
+      else
+        for check in lint typecheck test build; do
+          if (cd "$p" && npm run "$check" --if-present); then
+            printf -- '- OK: npm run %s --if-present (missing scripts are skipped)\n' "$check" >> "$report"
+          else
+            printf -- '- FAIL: npm run %s --if-present\n' "$check" >> "$report"
+            failures=$((failures + 1))
+          fi
+        done
+      fi
+    elif [ -f "$p/Cargo.toml" ]; then
+      if command -v cargo >/dev/null 2>&1 && (cd "$p" && cargo check); then
+        printf '%s\n' '- OK: cargo check' >> "$report"
+      else
+        printf '%s\n' '- FAIL: cargo check (or cargo unavailable)' >> "$report"
+        failures=$((failures + 1))
+      fi
+    elif [ -f "$p/go.mod" ]; then
+      if command -v go >/dev/null 2>&1 && (cd "$p" && go test ./...); then
+        printf '%s\n' '- OK: go test ./...' >> "$report"
+      else
+        printf '%s\n' '- FAIL: go test ./... (or go unavailable)' >> "$report"
+        failures=$((failures + 1))
+      fi
     else
-      git status --short || true
-      echo "- No build system detected; git status checked" >> "$report"
+      if (cd "$p" && git status --short); then
+        printf '%s\n' '- INFO: no recognized build system; git status checked (not a test)' >> "$report"
+      else
+        printf '%s\n' '- FAIL: git status' >> "$report"
+        failures=$((failures + 1))
+      fi
     fi
+    printf '\n' >> "$report"
+  done < <(repo_paths)
 
-    echo >> "$report"
-  done
-
-  echo
-  echo "Verify report written: $report"
+  if [ "$checked" -eq 0 ]; then
+    printf '%s\n' '- FAIL: no repositories discovered' >> "$report"
+    failures=$((failures + 1))
+  fi
+  printf 'Result: %s failure(s) across %s repository/repositories.\n' "$failures" "$checked" >> "$report"
+  printf '\nVerify report written: %s\n' "$report"
+  [ "$failures" -eq 0 ]
 }
