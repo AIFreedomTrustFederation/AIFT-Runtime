@@ -8,11 +8,11 @@ LLAMA="$HOME/Aetherion/llama.cpp/build/bin/llama-server"
 
 echo "=== Aetherion Optimization Script ==="
 
-# Stop existing server
-if pgrep llama-server >/dev/null; then
-    echo "Stopping existing Aetherion..."
-    pkill llama-server || true
-    sleep 2
+# Stop only the process previously launched by this checkout.
+# A mismatched PID is an error; never terminate other llama-server instances.
+if [ -f "$AI_HOME/aetherion.pid" ]; then
+    echo "Stopping previously tracked Aetherion..."
+    "$AI_HOME/stop.sh"
 fi
 
 # Backup current configuration
@@ -62,15 +62,7 @@ SCRIPT
 
 chmod +x "$START"
 
-# Create stop script
-cat > "$AI_HOME/stop.sh" <<'STOP'
-#!/data/data/com.termux/files/usr/bin/bash
-
-pkill llama-server 2>/dev/null || true
-echo "Aetherion stopped."
-STOP
-
-chmod +x "$AI_HOME/stop.sh"
+# stop.sh is version-controlled and intentionally not regenerated here.
 
 # Create status script
 cat > "$AI_HOME/status.sh" <<'STATUS'

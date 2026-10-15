@@ -101,7 +101,7 @@ for file in "${model_files[@]}"; do
   fi
 done
 
-PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p 'test_verify.py'
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p 'test_*.py'
 
 printf 'Validated %d shell scripts, %d Python sources, %d JSON documents, and %d model pointers.\n' \
   "${#shell_files[@]}" "${#python_files[@]}" "${#json_files[@]}" \

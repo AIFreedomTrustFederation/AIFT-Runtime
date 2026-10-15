@@ -73,6 +73,8 @@ source ./runtime/verify.sh && aift_verify
 
 `aift_verify` writes per-command PASS/FAIL results to `$AIFT_REPORTS/verify-report.md` and returns a nonzero status when an attempted Node, Cargo, Go, or fallback Git check fails, when a required tool is missing, or when no repositories are discovered. It continues checking other repositories so the report captures all observed failures. Run `source ./runtime/verify.sh && aift_verify` from a configured workspace; a nonzero result now signals an unsuccessful verification. Node checks still use `npm run <script> --if-present`, so a successful command may mean that the corresponding script was absent; inspect each project's scripts and command output before claiming coverage. This source-level behavior is not proof that a live model or service is healthy.
 
+The Aetherion shutdown command is `bash runtime/ai/stop.sh`. It reads `runtime/ai/aetherion.pid` relative to the script, checks the running process's executable arguments and `-m` model path, and sends SIGTERM **only** to the matching server. Missing PID files are treated as already stopped; malformed, mismatched, or unreadable live PIDs fail without signaling another process. `optimize_aetherion.sh` uses this scoped stop command and no longer regenerates the stop script. This is a Linux/Termux `/proc` check, not a guarantee against a concurrent PID-reuse race or an unresponsive process.
+
 The dependency-free `bash qa-local.sh` source gate also runs isolated regression tests for the verification exit status; it does not execute live workspace builds or runtime health checks.
 
 Primary entry points are intentionally simple:
