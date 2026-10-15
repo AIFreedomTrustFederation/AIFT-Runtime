@@ -31,7 +31,13 @@ repo_paths() {
     case "$name" in
       .github|runtime|registry|reports|intelligence|manifests|scripts) continue ;;
     esac
-    [ -d "$d/.git" ] && echo "$d"
+    # Linked Git worktrees have a .git file rather than a .git directory.
+    # Validate the marker before including a repository in workspace operations.
+    if [ -d "$d/.git" ] || [ -f "$d/.git" ]; then
+      if git -C "$d" rev-parse --show-toplevel >/dev/null 2>&1; then
+        printf '%s\n' "$d"
+      fi
+    fi
   done | sort
 }
 

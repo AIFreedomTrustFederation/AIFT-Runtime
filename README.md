@@ -73,7 +73,9 @@ source ./runtime/verify.sh && aift_verify
 
 `aift_verify` writes per-command PASS/FAIL results to `$AIFT_REPORTS/verify-report.md` and returns a nonzero status when an attempted Node, Cargo, Go, or fallback Git check fails, when a required tool is missing, or when no repositories are discovered. It continues checking other repositories so the report captures all observed failures. Run `source ./runtime/verify.sh && aift_verify` from a configured workspace; a nonzero result now signals an unsuccessful verification. Node checks still use `npm run <script> --if-present`, so a successful command may mean that the corresponding script was absent; inspect each project's scripts and command output before claiming coverage. This source-level behavior is not proof that a live model or service is healthy.
 
-The dependency-free `bash qa-local.sh` source gate also runs isolated regression tests for the verification exit status; it does not execute live workspace builds or runtime health checks.
+Repository discovery in `runtime/common.sh` recognizes both ordinary Git checkouts (a `.git` directory) and linked Git worktrees (a `.git` file) immediately beneath `$AIFT_WORKSPACE`. Invalid Git markers are ignored. `aift_verify` handles repository paths containing spaces, but `aift_status`, `aift_pull`, and `aift_push` still use whitespace-splitting loops; do not use those commands for workspace paths containing spaces until their iteration is corrected.
+
+The dependency-free `bash qa-local.sh` source gate runs isolated regression tests for verification exit status and repository discovery; it does not execute live workspace builds or runtime health checks.
 
 Primary entry points are intentionally simple:
 
