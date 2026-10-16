@@ -13,7 +13,7 @@
     "bootstrap": "./bootstrap.sh",
     "verify": "bash -c 'source ./runtime/verify.sh && aift_verify'",
     "doctor": "./runtime/doctor.sh",
-    "status": "./runtime/status.sh"
+    "status": "bash -c 'test -r \"$HOME/AIFT/runtime/common.sh\" && source ./runtime/status.sh && aift_status'"
   },
   "standards": {
     "localFirst": true,

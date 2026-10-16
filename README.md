@@ -74,21 +74,20 @@ source ./runtime/verify.sh && aift_verify
 `aift_verify` writes per-command PASS/FAIL results to `$AIFT_REPORTS/verify-report.md` and returns a nonzero status when an attempted Node, Cargo, Go, or fallback Git check fails, when a required tool is missing, or when no repositories are discovered. It continues checking other repositories so the report captures all observed failures. Run `source ./runtime/verify.sh && aift_verify` from a configured workspace; a nonzero result now signals an unsuccessful verification. Node checks still use `npm run <script> --if-present`, so a successful command may mean that the corresponding script was absent; inspect each project's scripts and command output before claiming coverage. This source-level behavior is not proof that a live model or service is healthy.
 
 
-The federation manifest's `commands.verify` invokes `bash -c 'source ./runtime/verify.sh && aift_verify'` from the repository root. Direct execution of `./runtime/verify.sh` only defines the function and does not verify repositories. This command requires Bash, `$HOME/AIFT/runtime/common.sh`, a configured workspace, and writable reports directory. Failures are returned to the caller. The manifest's `doctor` and `status` commands still reference function-only scripts; direct execution of those entries is not a readiness check.
+The federation manifest's `commands.verify` invokes `bash -c 'source ./runtime/verify.sh && aift_verify'` from the repository root. Direct execution of `./runtime/verify.sh` only defines the function and does not verify repositories. This command requires Bash, `$HOME/AIFT/runtime/common.sh`, a configured workspace, and writable reports directory. Failures are returned to the caller. The manifest's `status` command now invokes `bash -c 'test -r "$HOME/AIFT/runtime/common.sh" && source ./runtime/status.sh && aift_status'` from the repository root. It reports each discovered repository's local Git state and fails if the required workspace helper is missing. It is diagnostic output, not a health or synchronization guarantee. The manifest's `doctor` entry still points at a function-only script and does not run its diagnostic function.
 
-Repository discovery in `runtime/common.sh` recognizes both ordinary Git checkouts (a `.git` directory) and linked Git worktrees (a `.git` file) immediately beneath `$AIFT_WORKSPACE`. Invalid Git markers are ignored. `aift_verify` handles repository paths containing spaces, but `aift_status`, `aift_pull`, and `aift_push` still use whitespace-splitting loops; do not use those commands for workspace paths containing spaces until their iteration is corrected.
+Repository discovery in `runtime/common.sh` recognizes both ordinary Git checkouts (a `.git` directory) and linked Git worktrees (a `.git` file) immediately beneath `$AIFT_WORKSPACE`. Invalid Git markers are ignored. `aift_verify` and `aift_status` handle repository paths containing spaces. `aift_status` also preserves its caller's working directory. `aift_pull` and `aift_push` still use whitespace-splitting loops; do not use those synchronization commands for workspace paths containing spaces until their iteration is corrected.
 
 The dependency-free `bash qa-local.sh` source gate runs isolated regression tests for verification exit status and repository discovery; it does not execute live workspace builds or runtime health checks.
 
-Primary entry points are intentionally simple:
+The standalone top-level entry points are:
 
 ```bash
 ./bootstrap.sh
 ./health.sh
-./runtime/doctor.sh
-./runtime/status.sh
-./runtime/verify.sh
 ```
+
+The `runtime/doctor.sh`, `runtime/status.sh`, and `runtime/verify.sh` files define functions and must be sourced and called as shown above; direct execution alone does not perform their operations.
 
 Additional runtime services include:
 
