@@ -11,7 +11,7 @@
   "commands": {
     "health": "./health.sh",
     "bootstrap": "./bootstrap.sh",
-    "verify": "./runtime/verify.sh",
+    "verify": "bash -c 'source ./runtime/verify.sh && aift_verify'",
     "doctor": "./runtime/doctor.sh",
     "status": "./runtime/status.sh"
   },
