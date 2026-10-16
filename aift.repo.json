@@ -12,8 +12,8 @@
     "health": "./health.sh",
     "bootstrap": "./bootstrap.sh",
     "verify": "bash -c 'source ./runtime/verify.sh && aift_verify'",
-    "doctor": "./runtime/doctor.sh",
-    "status": "./runtime/status.sh"
+    "doctor": "bash -c 'source \"$HOME/AIFT/runtime/common.sh\" && source ./runtime/doctor.sh && aift_doctor'",
+    "status": "bash -c 'source \"$HOME/AIFT/runtime/common.sh\" && source ./runtime/status.sh && aift_status'"
   },
   "standards": {
     "localFirst": true,
