@@ -12,7 +12,8 @@ aift_push() {
   echo "Commit message: \`$commit_msg\`" >> "$report"
   echo >> "$report"
 
-  for p in $(repo_paths); do
+  while IFS= read -r p; do
+    [[ -n "$p" ]] || continue
     name="$(repo_name "$p")"
 
     echo
@@ -79,7 +80,7 @@ aift_push() {
       echo "- $name: commit failed" >> "$report"
       echo "Commit failed."
     fi
-  done
+  done < <(repo_paths)
 
   echo
   echo "Push report written: $report"
