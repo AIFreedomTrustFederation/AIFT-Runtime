@@ -2,7 +2,7 @@
 source "$HOME/AIFT/runtime/common.sh"
 
 aift_status() {
-  for p in $(repo_paths); do
+  while IFS= read -r p; do
     echo
     echo "======================================"
     echo "$(repo_name "$p")"
@@ -12,5 +12,5 @@ aift_status() {
     echo "Changed files: $(git_changed_count "$p")"
     cd "$p"
     git status --short || true
-  done
+  done < <(repo_paths)
 }

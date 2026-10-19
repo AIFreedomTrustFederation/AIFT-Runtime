@@ -9,7 +9,7 @@ aift_pull() {
   echo "Generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$report"
   echo >> "$report"
 
-  for p in $(repo_paths); do
+  while IFS= read -r p; do
     name="$(repo_name "$p")"
 
     echo
@@ -41,7 +41,7 @@ aift_pull() {
     else
       echo "- $name: pull failed / manual merge needed" >> "$report"
     fi
-  done
+  done < <(repo_paths)
 
   echo
   echo "Pull report written: $report"
