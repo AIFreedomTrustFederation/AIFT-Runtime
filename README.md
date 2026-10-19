@@ -103,6 +103,11 @@ Additional runtime services include:
 
 Synchronization deserves particular care. Pull and push are not morally neutral merely because Git makes them easy. A governed runtime should know which repository it is changing, whether local work would be overwritten, whether the remote has diverged, and whether the operator has delegated the action.
 
+### Risk-based delegation for automation
+
+Routine, reversible operations such as documentation corrections, diagnostics, tests, and safe synchronization may run without per-action approval when covered by standing operator delegation, repository permissions, and automated checks. Verify relevant tests and repository state before publishing changes; respect branch protections and record the resulting commit or failure. Escalate major doctrinal or constitutional revisions, trust-identity and governing-authority changes, security-sensitive policy changes, destructive resets, and other high-impact operations for explicit review. Delegation is an intended governance policy, **not** an authorization gate currently enforced by `runtime/pull.sh`, `runtime/push.sh`, or `runtime/workflow.sh`; those scripts must not be treated as implementing this classification merely because the README describes it. In particular, review branch-reset behavior before enabling unattended synchronization.
+
+
 ---
 
 ## Book IV — The Local Body of the Federation
