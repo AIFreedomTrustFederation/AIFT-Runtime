@@ -78,6 +78,8 @@ The federation manifest's `commands.verify` invokes `bash -c 'source ./runtime/v
 
 Repository discovery in `runtime/common.sh` recognizes both ordinary Git checkouts (a `.git` directory) and linked Git worktrees (a `.git` file) immediately beneath `$AIFT_WORKSPACE`. Invalid Git markers are ignored. `aift_verify`, `aift_status`, `aift_pull`, and `aift_push` now preserve spaces and shell glob characters in discovered repository paths. Repository discovery is line-delimited, so paths containing newline characters remain unsupported. This source-level improvement does not verify remote synchronization or eliminate the branch-reset risks described below.
 
+The registry generator (`source ./runtime/registry.sh && aift_registry`) also preserves spaces and shell glob characters in repository paths. This is covered by focused regression tests; the dashboard, intelligence, and graph generators still use whitespace-splitting loops and are not covered by this fix.
+
 The dependency-free `bash qa-local.sh` source gate runs isolated regression tests for verification exit status and repository discovery; it does not execute live workspace builds or runtime health checks.
 
 Primary entry points are intentionally simple:
