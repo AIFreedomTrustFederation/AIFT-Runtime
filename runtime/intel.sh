@@ -11,7 +11,10 @@ safe_find_json() {
     ! -path "*/.next/*" \
     ! -path "*/dist/*" \
     ! -path "*/build/*" 2>/dev/null \
-    | sed "s#^$p/##" | sort | json_array_from_lines
+    | while IFS= read -r file; do
+        # Strip the literal repository prefix; paths may contain sed metacharacters.
+        printf '%s\n' "${file#"$p"/}"
+      done | sort | json_array_from_lines
 }
 
 aift_intelligence() {
@@ -26,8 +29,8 @@ aift_intelligence() {
     echo '  "workspace": "'"$(json_escape "$AIFT_WORKSPACE")"'",'
     echo '  "repositories": ['
 
-    local first=1
-    for p in $(repo_paths); do
+    local first=1 p name language runtime commands agents docs schemas manifests
+    while IFS= read -r p; do
       [ "$first" = 0 ] && echo ","
       first=0
 
@@ -54,7 +57,7 @@ aift_intelligence() {
       "manifests": $manifests
     }
 JSON
-    done
+    done < <(repo_paths)
 
     echo
     echo "  ]"
@@ -66,13 +69,13 @@ JSON
     echo
     echo "Generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
     echo
-    for p in $(repo_paths); do
+    while IFS= read -r p; do
       echo "## $(repo_name "$p")"
       echo
       echo "- Language: \`$(detect_language "$p")\`"
       echo "- Runtime: \`$(detect_runtime "$p")\`"
       echo
-    done
+    done < <(repo_paths)
   } > "$report"
 
   echo "Intelligence written."
