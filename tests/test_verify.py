@@ -44,17 +44,17 @@ repo_name() { printf '%s\n' "${1##*/}"; }
     def test_failed_node_check_propagates_and_is_reported(self):
         repo = self.root / 'node project'
         repo.mkdir()
-        (repo / 'package.json').write_text('{}')
+        (repo / 'package.json').write_text('{"scripts":{"lint":"exit 0","typecheck":"exit 0","test":"exit 0","build":"exit 0"}}')
         self.command('npm', '[[ "$2" == test ]] && exit 7\nexit 0\n')
         result = self.run_verify([repo])
         self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertIn('- FAIL: npm run test --if-present', self.report())
+        self.assertIn('- FAIL: npm run test', self.report())
         self.assertIn('Failed checks: 1', self.report())
 
     def test_successful_node_checks_pass(self):
         repo = self.root / 'node project'
         repo.mkdir()
-        (repo / 'package.json').write_text('{}')
+        (repo / 'package.json').write_text('{"scripts":{"lint":"exit 0","typecheck":"exit 0","test":"exit 0","build":"exit 0"}}')
         self.command('npm', 'exit 0\n')
         result = self.run_verify([repo])
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -77,7 +77,7 @@ repo_name() { printf '%s\n' "${1##*/}"; }
     def test_missing_node_tool_is_not_reported_as_success(self):
         repo = self.root / 'node project'
         repo.mkdir()
-        (repo / 'package.json').write_text('{}')
+        (repo / 'package.json').write_text('{"scripts":{"lint":"exit 0","typecheck":"exit 0","test":"exit 0","build":"exit 0"}}')
         for executable in ('date', 'mkdir'):
             (self.bin / executable).symlink_to(shutil.which(executable))
         self.env['PATH'] = str(self.bin)
@@ -90,13 +90,42 @@ repo_name() { printf '%s\n' "${1##*/}"; }
         second = self.root / 'second repo'
         for repo in (first, second):
             repo.mkdir()
-            (repo / 'package.json').write_text('{}')
+            (repo / 'package.json').write_text('{"scripts":{"lint":"exit 0","typecheck":"exit 0","test":"exit 0","build":"exit 0"}}')
         self.command('npm', '[[ "$PWD" == *"first repo"* && "$2" == test ]] && exit 2\nexit 0\n')
         result = self.run_verify([first, second])
         self.assertEqual(result.returncode, 1)
         self.assertIn('## first repo', self.report())
         self.assertIn('## second repo', self.report())
         self.assertIn('Failed checks: 1', self.report())
+
+    def test_node_project_without_verification_scripts_fails(self):
+        repo = self.root / 'node project'
+        repo.mkdir()
+        (repo / 'package.json').write_text('{}')
+        self.command('npm', 'exit 0\n')
+        result = self.run_verify([repo])
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn('FAIL: No lint, typecheck, test, or build script declared', self.report())
+        self.assertNotIn('- PASS: npm run', self.report())
+
+    def test_node_project_with_one_script_reports_three_skips(self):
+        repo = self.root / 'node project'
+        repo.mkdir()
+        (repo / 'package.json').write_text('{"scripts":{"test":"echo ok"}}')
+        self.command('npm', '[[ "$2" == test ]] || exit 12\nexit 0\n')
+        result = self.run_verify([repo])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('- PASS: npm run test', self.report())
+        self.assertEqual(self.report().count('- SKIP: npm run'), 3)
+
+    def test_blank_script_is_not_verification_coverage(self):
+        repo = self.root / 'node project'
+        repo.mkdir()
+        (repo / 'package.json').write_text('{"scripts":{"lint":"   "}}')
+        self.command('npm', 'exit 0\n')
+        result = self.run_verify([repo])
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn('FAIL: No lint, typecheck, test, or build script declared', self.report())
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

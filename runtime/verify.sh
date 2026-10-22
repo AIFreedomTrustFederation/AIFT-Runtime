@@ -43,12 +43,25 @@ aift_verify() {
       if ! command -v npm >/dev/null 2>&1; then
         printf '%s\n' '- FAIL: npm unavailable for Node project' >> "$report"
         failures=$((failures + 1))
+      elif ! command -v node >/dev/null 2>&1; then
+        printf '%s\n' '- FAIL: node unavailable for npm script discovery' >> "$report"
+        failures=$((failures + 1))
       else
+        local checked=0
         for task in lint typecheck test build; do
-          if ! aift_verify_check "$report" "npm run $task --if-present" npm run "$task" --if-present; then
-            failures=$((failures + 1))
+          if node -e 'const p = require("./package.json"); const s = p.scripts?.[process.argv[1]]; process.exit(typeof s === "string" && s.trim() ? 0 : 1)' "$task" 2>/dev/null; then
+            checked=$((checked + 1))
+            if ! aift_verify_check "$report" "npm run $task" npm run "$task"; then
+              failures=$((failures + 1))
+            fi
+          else
+            printf '%s\n' "- SKIP: npm run $task (script not declared)" >> "$report"
           fi
         done
+        if ((checked == 0)); then
+          printf '%s\n' '- FAIL: No lint, typecheck, test, or build script declared' >> "$report"
+          failures=$((failures + 1))
+        fi
       fi
     elif [[ -f Cargo.toml ]]; then
       if ! command -v cargo >/dev/null 2>&1; then
