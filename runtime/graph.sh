@@ -13,11 +13,11 @@ aift_graph() {
     echo "│   ├── $AIFT_REGISTRY/federation-index.json"
     echo "│   └── $AIFT_INTEL/federation-intelligence.json"
 
-    for p in $(repo_paths); do
+    while IFS= read -r p; do
       echo "├── $(repo_name "$p")"
       echo "│   ├── Language: $(detect_language "$p")"
       echo "│   └── Runtime: $(detect_runtime "$p")"
-    done
+    done < <(repo_paths)
 
     echo "└── Principle"
     echo "    └── One workspace, many sovereign repositories, shared local-first runtime"

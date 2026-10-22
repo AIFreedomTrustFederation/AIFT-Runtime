@@ -93,13 +93,16 @@ source ./runtime/verify.sh && aift_verify
 Additional runtime services include:
 
 ```bash
-./runtime/graph.sh
+source ./runtime/graph.sh && aift_graph
+source ./runtime/dashboard.sh && aift_dashboard
 ./runtime/intel.sh
 ./runtime/repo.sh
 ./runtime/registry.sh
 ./runtime/pull.sh
 ./runtime/push.sh
 ```
+
+The dashboard and graph generators are function-only scripts: executing their files directly does not generate a report. In a configured workspace, source and invoke the functions as shown above. Both generators preserve spaces and shell glob characters in discovered repository paths; newline-containing paths remain unsupported.
 
 Synchronization deserves particular care. Pull and push are not morally neutral merely because Git makes them easy. A governed runtime should know which repository it is changing, whether local work would be overwritten, whether the remote has diverged, and whether the operator has delegated the action.
 

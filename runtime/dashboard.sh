@@ -12,7 +12,7 @@ aift_dashboard() {
     echo
     echo "Workspace: \`$AIFT_WORKSPACE\`"
     echo
-    for p in $(repo_paths); do
+    while IFS= read -r p; do
       echo "## $(repo_name "$p")"
       echo
       echo "- Branch: \`$(git_branch "$p")\`"
@@ -21,7 +21,7 @@ aift_dashboard() {
       echo "- Language: \`$(detect_language "$p")\`"
       echo "- Runtime: \`$(detect_runtime "$p")\`"
       echo
-    done
+    done < <(repo_paths)
   } > "$out"
 
   echo "Dashboard written: $out"
