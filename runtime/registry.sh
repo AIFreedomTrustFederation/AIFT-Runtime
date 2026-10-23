@@ -14,7 +14,9 @@ aift_registry() {
     echo '  "repositories": ['
 
     local first=1
-    for p in $(repo_paths); do
+    local p name branch commit changed language runtime
+    while IFS= read -r p; do
+      [[ -n "$p" ]] || continue
       [ "$first" = 0 ] && echo ","
       first=0
 
@@ -38,7 +40,7 @@ aift_registry() {
       "federationDoc": "$(json_escape "$p/FEDERATION.md")"
     }
 JSON
-    done
+    done < <(repo_paths)
 
     echo
     echo "  ]"
