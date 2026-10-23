@@ -95,12 +95,13 @@ Additional runtime services include:
 ```bash
 source ./runtime/graph.sh && aift_graph
 source ./runtime/dashboard.sh && aift_dashboard
-./runtime/intel.sh
-./runtime/repo.sh
+source ./runtime/intel.sh && aift_intelligence
 source ./runtime/registry.sh && aift_registry
-./runtime/pull.sh
-./runtime/push.sh
+source ./runtime/pull.sh && aift_pull
+source ./runtime/push.sh && aift_push
 ```
+
+These are sourced function entry points, not standalone executables: running `runtime/intel.sh`, `runtime/pull.sh`, or `runtime/push.sh` directly only defines functions and does not perform the named operation. They depend on helpers installed under `$HOME/AIFT/runtime/`. `runtime/repo.sh` is a library of detection functions, not an executable report command. **Review local changes and remote branches before invoking `aift_pull` or `aift_push`**: they can change local branches, and push can create commits and publish them without an approval prompt. `runtime/workflow.sh` likewise defines `aift_update`, which chains these mutating operations; its presence does not implement the delegation policy described above.
 
 The dashboard and graph generators are function-only scripts: executing their files directly does not generate a report. In a configured workspace, source and invoke the functions as shown above. Both generators preserve spaces and shell glob characters in discovered repository paths; newline-containing paths remain unsupported.
 
