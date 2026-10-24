@@ -65,7 +65,7 @@ def main():
 
     if not transform.exists():
         print("Missing transformer report")
-        return
+        return 1
 
 
     with open(transform) as f:
@@ -143,6 +143,8 @@ def main():
         print("STATUS:")
         print("BLOCKED - TEST FAILURE")
 
+    return 0 if report["mutation_allowed"] else 1
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
