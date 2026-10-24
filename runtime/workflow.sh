@@ -14,7 +14,7 @@ aift_update() {
   echo " AIFT Full Update Workflow"
   echo "======================================"
 
-  aift_pull
+  aift_pull || return $?
   aift_registry
   aift_intelligence
   aift_dashboard
