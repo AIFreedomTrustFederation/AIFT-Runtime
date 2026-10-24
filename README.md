@@ -86,6 +86,9 @@ Repository discovery in `runtime/common.sh` recognizes both ordinary Git checkou
 
 The dependency-free `bash qa-local.sh` source gate runs isolated regression tests for verification exit status and repository discovery; it does not execute live workspace builds or runtime health checks.
 
+The experimental [`runtime/intelligence/test-runner.py`](runtime/intelligence/test-runner.py) reads a task-specific transformer report and runs `npm run check` and `npm run build` in `$HOME/AIFT/Aether_Coin_biozonecurrency`. It writes a JSON test report with `mutation_allowed` and now exits nonzero when either command fails or the transformer report is missing; callers must check the process exit status as well as the report. This test runner does not apply patches, prove production readiness, or enforce authorization. `python3 -m unittest discover -s tests -p 'test_intelligence_test_runner.py'` exercises its failure and success paths using isolated fake npm commands.
+
+
 Primary entry points are intentionally simple:
 
 ```bash
