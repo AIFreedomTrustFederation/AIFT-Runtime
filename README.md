@@ -63,6 +63,12 @@ Receive → Inspect → Name → Propose → Consent → Act → Verify → Reco
 
 The checked-in scripts currently have two distinct invocation styles. `bootstrap.sh` and `health.sh` contain top-level commands and are intended to run from the repository root in a Termux environment. Bootstrap requires `git-lfs`, pulls LFS objects, checks for `runtime/ai/models/aetherion.gguf`, and invokes `runtime/ai/start.sh` only if it is executable. Health prints Git/LFS/model information and queries the local `127.0.0.1:8080/health` endpoint; its output is diagnostic, not proof of service readiness.
 
+### Local model artifact and startup checks
+
+The source-validation gate in [`qa-local.sh`](qa-local.sh) checks that tracked `*.gguf` entries are well-formed Git LFS pointers; it does not download model bytes or test inference. [`bootstrap.sh`](bootstrap.sh) invokes `git lfs pull`, then checks only that `runtime/ai/models/aetherion.gguf` exists. It does not independently verify that the file contains a loadable GGUF model. Successful source CI or a "Bootstrap complete" message therefore does not prove that the model is loaded or serving requests.
+
+[`runtime/ai/start.sh`](runtime/ai/start.sh) expects `$HOME/Aetherion/llama.cpp/build/bin/llama-server` and a writable `runtime/ai/logs/` directory; the script does not create the log directory. It attempts a background launch and immediately prints "Aetherion ONLINE" without checking process startup or HTTP readiness. [`runtime/ai/status.sh`](runtime/ai/status.sh) considers either a live recorded PID or a response from `127.0.0.1:8080/v1/models` sufficient to print "ONLINE"; neither proves that the intended model is loaded or can generate output. [`health.sh`](health.sh) probes the local `/health` endpoint but does not test inference. Before reporting operational readiness, inspect the downloaded model, server log, HTTP response, and a representative local inference request. The configured server binds to `127.0.0.1`; these scripts do not establish public API access or an authentication boundary.
+
 By contrast, `runtime/doctor.sh`, `runtime/status.sh`, and `runtime/verify.sh` **define shell functions** (`aift_doctor`, `aift_status`, and `aift_verify`) rather than invoking them automatically. They source `$HOME/AIFT/runtime/common.sh`, so that workspace file and its helpers must exist. Run these functions from a configured workspace, for example:
 
 ```bash
