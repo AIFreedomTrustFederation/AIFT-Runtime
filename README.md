@@ -88,6 +88,12 @@ Repository discovery in `runtime/common.sh` recognizes both ordinary Git checkou
 
 The dependency-free `bash qa-local.sh` source gate runs isolated regression tests for verification exit status and repository discovery; it does not execute live workspace builds or runtime health checks.
 
+### Commit-bound source-verification evidence
+
+The [Runtime Source Validation workflow](.github/workflows/qa.yml) runs [`scripts/run_runtime_verification.py`](scripts/run_runtime_verification.py), which executes `bash qa-local.sh`, checks the Git worktree before and after QA, and writes an `aift.verification.v1` JSON record outside the checkout. In GitHub Actions, the workflow attempts to upload that record as the `aift-runtime-verification` artifact, even if the QA step fails; an early identity or output-path failure can leave no artifact (`if-no-files-found: warn`). The record identifies the checked-out commit and rejects mismatched `GITHUB_SHA` or `GITHUB_REPOSITORY` values. Source-QA or worktree failures produce failed evidence and a nonzero exit. For local generation from a clean checkout, run `python3 -B scripts/run_runtime_verification.py --output /tmp/aift-runtime-verification.json` (the output must be outside the repository).
+
+The record is **unsigned source-verification evidence**, not independently authenticated CI provenance. It marks security and cross-repository dependency checks `not_checked` and deployment `not_applicable`; ignored files and external runtime state are outside the worktree check. A successful artifact does not prove model loading, inference, Termux integration, service health, deployment, or publication authorization. AIFT-OS can structurally assess supplied records against expected commit SHAs, but that alone does not authenticate their origin.
+
 The experimental [`runtime/intelligence/test-runner.py`](runtime/intelligence/test-runner.py) reads a task-specific transformer report and runs `npm run check` and `npm run build` in `$HOME/AIFT/Aether_Coin_biozonecurrency`. It writes a JSON test report with `mutation_allowed` and now exits nonzero when either command fails or the transformer report is missing; callers must check the process exit status as well as the report. This test runner does not apply patches, prove production readiness, or enforce authorization. `python3 -m unittest discover -s tests -p 'test_intelligence_test_runner.py'` exercises its failure and success paths using isolated fake npm commands.
 
 
