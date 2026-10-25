@@ -2,7 +2,9 @@
   "name": "Runtime Source Validation",
   "on": {
     "push": {
-      "branches": ["main"]
+      "branches": [
+        "main"
+      ]
     },
     "pull_request": {}
   },
@@ -33,8 +35,18 @@
           }
         },
         {
-          "name": "Validate tracked runtime sources",
-          "run": "bash qa-local.sh"
+          "name": "Validate runtime sources and emit verification evidence",
+          "run": "python -B scripts/run_runtime_verification.py --output \"${RUNNER_TEMP}/aift-runtime-verification.json\""
+        },
+        {
+          "name": "Upload runtime verification evidence",
+          "if": "always()",
+          "uses": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "with": {
+            "name": "aift-runtime-verification",
+            "path": "${{ runner.temp }}/aift-runtime-verification.json",
+            "if-no-files-found": "warn"
+          }
         },
         {
           "name": "Confirm validation leaves checkout clean",
