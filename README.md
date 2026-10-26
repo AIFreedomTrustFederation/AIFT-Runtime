@@ -71,6 +71,8 @@ The source-validation gate in [`qa-local.sh`](qa-local.sh) checks that tracked `
 
 [`runtime/ai/stop.sh`](runtime/ai/stop.sh) uses `pkill llama-server` rather than the PID recorded by `start.sh`. It may terminate other `llama-server` processes that the invoking user can signal, including instances unrelated to Aetherion. It suppresses `pkill` errors and prints "Aetherion stopped." even when no process was terminated; this message is not verified shutdown evidence. Check which processes are running before using the script on a shared host, and independently verify the intended service has stopped afterward.
 
+[`runtime/ai/optimize_aetherion.sh`](runtime/ai/optimize_aetherion.sh) is a mutating rewrite, not a read-only optimization check. When invoked, it first attempts `pkill llama-server` for all matching processes the user can signal, backs up `start.sh` if present, then overwrites `start.sh`, `stop.sh`, and `status.sh` before launching the server. It does not back up the previous `stop.sh` or `status.sh`. Its replacement status script reports `ONLINE` based on `pgrep llama-server` alone, replacing the checked-in PID/HTTP probe behavior described above. Do not run this script as part of source verification or unattended diagnostics; review its effects before use and independently verify model loading and inference afterward.
+
 By contrast, `runtime/doctor.sh`, `runtime/status.sh`, and `runtime/verify.sh` **define shell functions** (`aift_doctor`, `aift_status`, and `aift_verify`) rather than invoking them automatically. They source `$HOME/AIFT/runtime/common.sh`, so that workspace file and its helpers must exist. Run these functions from a configured workspace, for example:
 
 ```bash
