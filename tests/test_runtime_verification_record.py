@@ -67,6 +67,22 @@ class RuntimeVerificationRecordTests(unittest.TestCase):
         self.assertEqual(module.generate(self.repo, self.output, {}), 1)
         self.assertEqual(self.record()["checks"][1]["status"], "failed")
 
+    def test_qa_moves_head_with_clean_worktree_fails_closed(self):
+        (self.repo / "qa-local.sh").write_text(
+            "#!/usr/bin/env bash\n"
+            "git commit --allow-empty -qm 'QA moved HEAD'\n"
+        )
+        self.git("add", "qa-local.sh")
+        self.git("commit", "-qm", "QA fixture")
+        initial_head = self.git("rev-parse", "HEAD").stdout.strip()
+        self.assertEqual(module.generate(self.repo, self.output, {}), 1)
+        self.assertNotEqual(self.git("rev-parse", "HEAD").stdout.strip(), initial_head)
+        self.assertEqual(self.git("status", "--porcelain").stdout, "")
+        self.assertEqual(self.record()["commit_sha"], initial_head)
+        self.assertEqual(self.record()["checks"][0]["status"], "passed")
+        self.assertEqual(self.record()["checks"][1]["status"], "failed")
+        self.assertEqual(self.record()["overall_status"], "failed")
+
     def test_commit_mismatch_rejected_without_artifact(self):
         self.assertEqual(module.generate(self.repo, self.output, {"GITHUB_SHA": "0" * 40}), 2)
         self.assertFalse(self.output.exists())
