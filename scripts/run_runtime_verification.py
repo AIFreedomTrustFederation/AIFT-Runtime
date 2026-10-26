@@ -29,7 +29,7 @@ def worktree_check(root: Path) -> dict:
         code = 127
     return {
         "id": "worktree",
-        "command": "git status --porcelain --untracked-files=normal (before and after)",
+        "command": "git status --porcelain --untracked-files=normal; git rev-parse HEAD (before and after)",
         "status": "passed" if code == 0 else "failed",
         "exit_code": code,
     }
@@ -60,7 +60,10 @@ def generate(root: Path, output: Path, environ: dict[str, str] | None = None) ->
             print(f"runtime QA could not execute: {error}", file=sys.stderr)
             qa_code = 127
         after = worktree_check(root)
+        post_qa_head = command_result(["git", "rev-parse", "HEAD"], root)
         worktree_code = before["exit_code"] or after["exit_code"]
+        if post_qa_head.returncode != 0 or post_qa_head.stdout.strip() != commit:
+            worktree_code = worktree_code or 1
         source = "github-actions" if env.get("GITHUB_ACTIONS") == "true" else "local"
         run_id = env.get("GITHUB_RUN_ID", "")
         run_url = (f"https://github.com/{REPOSITORY}/actions/runs/{run_id}"
