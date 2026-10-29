@@ -159,6 +159,10 @@ for item in os.listdir(ROOT):
     repos.append(info)
 
 
+# The generated registry may not exist on a fresh AIFT workspace.
+os.makedirs(REG, exist_ok=True)
+
+
 with open(
 os.path.join(REG,"system-map.json"),
 "w"
