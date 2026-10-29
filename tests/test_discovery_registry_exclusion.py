@@ -99,6 +99,37 @@ class DiscoveryRegistryExclusionTests(unittest.TestCase):
             "Failed publication must clean up temporary files",
         )
 
+    def test_all_five_outputs_use_atomic_replacement(self):
+        """All registry products must publish via same-directory os.replace."""
+        hooks = self.home / "hooks"
+        hooks.mkdir()
+        log_path = self.home / "replacements.txt"
+        (hooks / "sitecustomize.py").write_text(
+            "import os\n"
+            "_replace = os.replace\n"
+            "def log_replace(src, dst):\n"
+            "    with open(os.environ['AIFT_REPLACE_LOG'], 'a') as log:\n"
+            "        log.write(os.path.basename(os.fspath(dst)) + chr(10))\n"
+            "    return _replace(src, dst)\n"
+            "os.replace = log_replace\n"
+        )
+        env = dict(
+            os.environ, HOME=str(self.home), PYTHONPATH=str(hooks),
+            AIFT_REPLACE_LOG=str(log_path),
+        )
+        result = subprocess.run(
+            [BASH, str(SCRIPT)], env=env, cwd=self.home,
+            capture_output=True, text=True, timeout=15, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        expected = {
+            "system-map.json", "capability-graph.json", "dependency-map.json",
+            "architecture-map.json", "missing-capabilities.json",
+        }
+        self.assertEqual(set(log_path.read_text().splitlines()), expected)
+        self.assertEqual(len(log_path.read_text().splitlines()), len(expected))
+        self.assertFalse(list(self.registry.glob(".aetherion-*.tmp")))
+
     def test_repeated_discovery_does_not_inventory_generated_outputs(self):
         self.discover()
         first = self.read("system-map.json")
