@@ -66,10 +66,8 @@ echo "[ Discovery Execution ]"
 
 LOG="$HOME/aetherion-discovery-test.log"
 
-python3 "$ROOT/runtime/core/aetherion-discover" \
->"$LOG" 2>&1
-
-if grep -q "Repositories" "$LOG"; then
+if bash "$ROOT/runtime/core/aetherion-discover" >"$LOG" 2>&1 \
+    && grep -q "^Repositories:" "$LOG"; then
 echo "✓ Discovery engine executed"
 cat "$LOG"
 PASS=$((PASS+1))
