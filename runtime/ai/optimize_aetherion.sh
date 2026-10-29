@@ -4,7 +4,15 @@ set -e
 
 AI_HOME="$(cd "$(dirname "$0")" && pwd)"
 START="$AI_HOME/start.sh"
+STATUS="$AI_HOME/status.sh"
 LLAMA="$HOME/Aetherion/llama.cpp/build/bin/llama-server"
+
+# The status probe is maintained independently; do not replace it with PID-only logic.
+# Fail before stopping a model or rewriting start/stop scripts if it is missing.
+if [ ! -f "$STATUS" ]; then
+    echo "ERROR: Missing status script: $STATUS" >&2
+    exit 1
+fi
 
 echo "=== Aetherion Optimization Script ==="
 
@@ -71,20 +79,6 @@ echo "Aetherion stopped."
 STOP
 
 chmod +x "$AI_HOME/stop.sh"
-
-# Create status script
-cat > "$AI_HOME/status.sh" <<'STATUS'
-#!/data/data/com.termux/files/usr/bin/bash
-
-if pgrep llama-server >/dev/null; then
-    echo "Aetherion ONLINE"
-    ps -A | grep llama-server
-else
-    echo "Aetherion OFFLINE"
-fi
-STATUS
-
-chmod +x "$AI_HOME/status.sh"
 
 # Keep CPU awake
 if command -v termux-wake-lock >/dev/null; then
