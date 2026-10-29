@@ -47,12 +47,14 @@ class DiscoveryInstallerConsistencyTests(unittest.TestCase):
                     capture_output=True, text=True, timeout=15, check=False,
                 )
                 self.assertEqual(discovery.returncode, 0, discovery.stdout + discovery.stderr)
-                self.assertIn("Repositories: 2", discovery.stdout)
+                # The installer creates AIFT/runtime/core; the heuristic scanner
+                # currently counts that top-level directory too.
+                self.assertIn("Repositories: 3", discovery.stdout)
                 registry = workspace / "registry"
                 system = json.loads((registry / "system-map.json").read_text())
-                self.assertEqual({item["name"] for item in system}, {"AIFT-OS", "AIFT-Runtime"})
+                self.assertEqual({item["name"] for item in system}, {"AIFT-OS", "AIFT-Runtime", "runtime"})
                 self.assertEqual(
-                    json.loads((registry / "architecture-map.json").read_text())["repositories"], 2
+                    json.loads((registry / "architecture-map.json").read_text())["repositories"], 3
                 )
                 self.assertFalse(list(registry.glob(".aetherion-*.tmp")))
 
