@@ -29,16 +29,23 @@ class AIStatusHTTPTests(unittest.TestCase):
             "      if [[ \"$arg\" == --fail || \"$arg\" == -f || \"$arg\" == -*f* ]]; then exit 22; fi\n"
             "    done\n"
             "    exit 0 ;;\n"
-            "  200) exit 0 ;;\n"
+            "  200)\n"
+            "    case \"$MOCK_HTTP_BODY\" in\n"
+            "      valid) echo '{\"object\":\"list\",\"data\":[{\"id\":\"aetherion.gguf\"}]}' ;;\n"
+            "      empty) echo '{\"object\":\"list\",\"data\":[]}' ;;\n"
+            "      malformed) echo 'not-json' ;;\n"
+            "      unrelated) echo '{\"status\":\"ok\"}' ;;\n"
+            "    esac\n"
+            "    exit 0 ;;\n"
             "  *) exit 7 ;;\n"
             "esac\n"
         )
         fake_curl.chmod(0o755)
 
-    def status(self, code):
+    def status(self, code, body="valid"):
         env = os.environ.copy()
         env.update(HOME=str(self.home), PATH=f"{self.bin}:{env['PATH']}",
-                   MOCK_HTTP_STATUS=str(code))
+                   MOCK_HTTP_STATUS=str(code), MOCK_HTTP_BODY=body)
         return subprocess.run([BASH, str(SCRIPT)], cwd=self.root, env=env,
                               capture_output=True, text=True, check=False)
 
@@ -51,6 +58,18 @@ class AIStatusHTTPTests(unittest.TestCase):
         result = self.status(200)
         self.assertIn("Aetherion ONLINE", result.stdout)
         self.assertIn("API responding on port 8080", result.stdout)
+
+    def test_http_200_empty_model_list_does_not_claim_online(self):
+        result = self.status(200, "empty")
+        self.assertIn("Aetherion OFFLINE", result.stdout)
+
+    def test_http_200_malformed_json_does_not_claim_online(self):
+        result = self.status(200, "malformed")
+        self.assertIn("Aetherion OFFLINE", result.stdout)
+
+    def test_http_200_unrelated_json_does_not_claim_online(self):
+        result = self.status(200, "unrelated")
+        self.assertIn("Aetherion OFFLINE", result.stdout)
 
     def test_live_pid_http_500_must_not_claim_online(self):
         ai_home = self.home / "AIFT/runtime/ai"
