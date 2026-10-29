@@ -98,7 +98,7 @@ echo
 echo "[ Runtime ]"
 
 check "Aetherion API" \
-"curl -s --max-time 5 http://127.0.0.1:8080/v1/models >/dev/null"
+"curl --fail --silent --max-time 5 http://127.0.0.1:8080/v1/models >/dev/null"
 
 
 echo
@@ -112,4 +112,7 @@ echo "FAILED: $FAIL"
 if [ "$FAIL" -eq 0 ]; then
 echo
 echo "✓ AETHERION AWARENESS LAYER OPERATIONAL"
+    exit 0
+else
+    exit 1
 fi
