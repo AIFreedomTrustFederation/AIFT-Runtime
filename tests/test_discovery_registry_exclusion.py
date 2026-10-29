@@ -66,6 +66,39 @@ class DiscoveryRegistryExclusionTests(unittest.TestCase):
         self.assertEqual(self.read("architecture-map.json")["repositories"], 2)
         self.assertIn("Repositories: 2", result.stdout)
 
+    def test_failed_atomic_publication_keeps_previous_json_intact(self):
+        """A failed replacement must not truncate the last valid registry file."""
+        self.discover()
+        previous = (self.registry / "system-map.json").read_bytes()
+        (self.aift / "AIFT-OS" / "package.json").write_text('{"name":"fixture"}')
+
+        # sitecustomize runs only in the disposable child interpreter.
+        # The old direct-write implementation never calls os.replace,
+        # so this test fails against the old implementation.
+        hooks = self.home / "hooks"
+        hooks.mkdir()
+        (hooks / "sitecustomize.py").write_text(
+            "import os\\n"
+            "_replace = os.replace\\n"
+            "def reject_system_map(src, dst):\\n"
+            "    if os.fspath(dst).endswith('/system-map.json'):\\n"
+            "        raise OSError('injected atomic publication failure')\\n"
+            "    return _replace(src, dst)\\n"
+            "os.replace = reject_system_map\\n"
+        )
+        env = dict(os.environ, HOME=str(self.home), PYTHONPATH=str(hooks))
+        result = subprocess.run(
+            [BASH, str(SCRIPT)], env=env, cwd=self.home,
+            capture_output=True, text=True, timeout=15, check=False,
+        )
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("injected atomic publication failure", result.stderr)
+        self.assertEqual((self.registry / "system-map.json").read_bytes(), previous)
+        self.assertFalse(
+            list(self.registry.glob(".aetherion-*.tmp")),
+            "Failed publication must clean up temporary files",
+        )
+
     def test_repeated_discovery_does_not_inventory_generated_outputs(self):
         self.discover()
         first = self.read("system-map.json")
