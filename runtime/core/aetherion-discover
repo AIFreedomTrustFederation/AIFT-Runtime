@@ -41,7 +41,7 @@ for item in os.listdir(ROOT):
     if not os.path.isdir(path):
         continue
 
-    if item in ignore:
+    if item in ignore or item == "registry":
         continue
 
     info={
