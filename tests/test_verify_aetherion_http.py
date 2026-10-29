@@ -34,6 +34,7 @@ class VerifyAetherionHTTPTests(unittest.TestCase):
         (ai / "start.sh").write_text('#!/usr/bin/env bash\nAI_HOME="$(dirname "$0")"\n')
         (ai / "start.sh").chmod(0o755)
         (ai / "optimize_aetherion.sh").write_text("#!/usr/bin/env bash\n")
+        (ai / "status.sh").write_bytes((SOURCE.parent / "runtime/ai/status.sh").read_bytes())
         (self.repo / SOURCE.name).write_bytes(SOURCE.read_bytes())
         llama = self.home / "Aetherion/llama.cpp/build/bin/llama-server"
         llama.parent.mkdir(parents=True)
@@ -58,7 +59,13 @@ class VerifyAetherionHTTPTests(unittest.TestCase):
             '  echo \'{"error":"models unavailable"}\'\n'
             '  exit 0\n'
             'fi\n'
-            'if (( is_models )); then echo \'{"object":"list","models":[],"data":[]}\' ; else echo ok; fi\n'
+            'if (( is_models )); then\n'
+            '  case "$MOCK_MODELS_BODY" in\n'
+            '    valid) echo \'{"object":"list","data":[{"id":"aetherion.gguf"}]}\' ;;\n'
+            '    unrelated) echo \'{"message":"models"}\' ;;\n'
+            '    empty) echo \'{"object":"list","data":[]}\' ;;\n'
+            '  esac\n'
+            'else echo ok; fi\n'
         )
         fake_curl.chmod(0o755)
         self.env = os.environ.copy()
@@ -68,8 +75,9 @@ class VerifyAetherionHTTPTests(unittest.TestCase):
         subprocess.run([GIT, "-C", str(self.repo), "add", "."], check=True)
         subprocess.run([GIT, "-C", str(self.repo), "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "fixture"], check=True)
 
-    def verify(self, models=200, root=200):
-        env = dict(self.env, MOCK_MODELS_STATUS=str(models), MOCK_ROOT_STATUS=str(root))
+    def verify(self, models=200, root=200, body="valid"):
+        env = dict(self.env, MOCK_MODELS_STATUS=str(models), MOCK_ROOT_STATUS=str(root),
+                   MOCK_MODELS_BODY=body)
         return subprocess.run([BASH, str(self.repo / SOURCE.name)], cwd=self.repo, env=env,
                               capture_output=True, text=True, timeout=10, check=False)
 
@@ -83,6 +91,18 @@ class VerifyAetherionHTTPTests(unittest.TestCase):
         result = self.verify(root=500)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("✗ API responding", result.stdout)
+
+    def test_http_200_unrelated_models_word_is_not_readiness(self):
+        result = self.verify(body="unrelated")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("✗ Aetherion API online", result.stdout)
+        self.assertNotIn("✓ AETHERION RUNTIME FULLY CONFIGURED", result.stdout)
+
+    def test_http_200_empty_model_list_is_not_readiness(self):
+        result = self.verify(body="empty")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("✗ Aetherion API online", result.stdout)
+        self.assertNotIn("✓ AETHERION RUNTIME FULLY CONFIGURED", result.stdout)
 
     def test_http_200_preserves_success(self):
         result = self.verify()
