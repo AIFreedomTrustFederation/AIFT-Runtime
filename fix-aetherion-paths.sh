@@ -46,9 +46,10 @@ nohup "$LLAMA" \
 
 echo $! > "$AI_HOME/aetherion.pid"
 
-echo "Aetherion ONLINE"
+echo "Aetherion STARTING (API readiness not yet verified)"
 echo "PID: $(cat "$AI_HOME/aetherion.pid")"
 echo "API: http://127.0.0.1:8080"
+echo "Check readiness with: $AI_HOME/status.sh"
 SCRIPT
 
 chmod +x runtime/ai/start.sh

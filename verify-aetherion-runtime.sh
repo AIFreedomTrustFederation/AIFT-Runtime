@@ -97,15 +97,16 @@ check "llama-server exists" \
 echo
 echo "[ Runtime ]"
 
+# Reuse the canonical bounded model-list validator; a 200 body mentioning "models" is insufficient.
 check "Aetherion API online" \
-"curl -s --max-time 5 '$API/v1/models' | grep -q models"
+"bash '$AI_DIR/status.sh' | grep -qx 'Aetherion ONLINE'"
 
 
 echo
 echo "[ API ]"
 
 check "API responding" \
-"curl -s --max-time 5 '$API' >/dev/null"
+"curl --fail --silent --max-time 5 '$API' >/dev/null"
 
 
 echo
