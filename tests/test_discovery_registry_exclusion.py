@@ -50,6 +50,22 @@ class DiscoveryRegistryExclusionTests(unittest.TestCase):
         self.assertEqual({item["repository"] for item in self.read("dependency-map.json")}, names)
         self.assertIn("Repositories: 2", result.stdout)
 
+    def test_missing_registry_is_initialized_on_first_discovery(self):
+        self.registry.rmdir()
+        result = self.discover()
+        self.assertTrue(self.registry.is_dir())
+        generated = {
+            "system-map.json", "capability-graph.json", "dependency-map.json",
+            "architecture-map.json", "missing-capabilities.json",
+        }
+        self.assertEqual({p.name for p in self.registry.iterdir()}, generated)
+        self.assertEqual(
+            {repo["name"] for repo in self.read("system-map.json")},
+            {"AIFT-OS", "AIFT-Runtime"},
+        )
+        self.assertEqual(self.read("architecture-map.json")["repositories"], 2)
+        self.assertIn("Repositories: 2", result.stdout)
+
     def test_repeated_discovery_does_not_inventory_generated_outputs(self):
         self.discover()
         first = self.read("system-map.json")
