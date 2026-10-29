@@ -55,7 +55,7 @@ class AIStatusHTTPTests(unittest.TestCase):
     def test_live_pid_http_500_must_not_claim_online(self):
         ai_home = self.home / "AIFT/runtime/ai"
         ai_home.mkdir(parents=True)
-        (ai_home / "aetherion.pid").write_text(f"{os.getpid()}\\n")
+        (ai_home / "aetherion.pid").write_text(f"{os.getpid()}\n")
         result = self.status(500)
         self.assertNotIn("ONLINE", result.stdout)
         self.assertIn("Aetherion OFFLINE", result.stdout)
@@ -63,7 +63,7 @@ class AIStatusHTTPTests(unittest.TestCase):
     def test_live_pid_http_200_retains_online(self):
         ai_home = self.home / "AIFT/runtime/ai"
         ai_home.mkdir(parents=True)
-        (ai_home / "aetherion.pid").write_text(f"{os.getpid()}\\n")
+        (ai_home / "aetherion.pid").write_text(f"{os.getpid()}\n")
         result = self.status(200)
         self.assertIn("Aetherion ONLINE", result.stdout)
         self.assertIn(f"PID: {os.getpid()}", result.stdout)
@@ -72,7 +72,7 @@ class AIStatusHTTPTests(unittest.TestCase):
     def test_invalid_pid_is_not_trusted(self):
         ai_home = self.home / "AIFT/runtime/ai"
         ai_home.mkdir(parents=True)
-        (ai_home / "aetherion.pid").write_text("-1\\n")
+        (ai_home / "aetherion.pid").write_text("-1\n")
         result = self.status(200)
         self.assertIn("Aetherion ONLINE", result.stdout)
         self.assertNotIn("PID:", result.stdout)
