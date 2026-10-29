@@ -98,14 +98,14 @@ echo
 echo "[ Runtime ]"
 
 check "Aetherion API online" \
-"curl -s --max-time 5 '$API/v1/models' | grep -q models"
+"curl --fail --silent --max-time 5 '$API/v1/models' | grep -q models"
 
 
 echo
 echo "[ API ]"
 
 check "API responding" \
-"curl -s --max-time 5 '$API' >/dev/null"
+"curl --fail --silent --max-time 5 '$API' >/dev/null"
 
 
 echo
