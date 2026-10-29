@@ -13,7 +13,7 @@ if [ -f "$AI_HOME/aetherion.pid" ]; then
     fi
 fi
 
-if curl -s http://127.0.0.1:8080/v1/models >/dev/null; then
+if curl --fail --silent --max-time 5 http://127.0.0.1:8080/v1/models >/dev/null 2>&1; then
     echo "Aetherion ONLINE"
     echo "API responding on port 8080"
 else
