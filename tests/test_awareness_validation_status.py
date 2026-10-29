@@ -24,7 +24,7 @@ class AwarenessValidationStatusTests(unittest.TestCase):
         intelligence = self.repo / "runtime/intelligence"
         core.mkdir(parents=True)
         intelligence.mkdir(parents=True)
-        (core / "aetherion-discover").write_text('print("Repositories: 1")\n')
+        (core / "aetherion-discover").write_text('#!/usr/bin/env bash\nprintf "Repositories: 1\\n"\ntouch "$HOME/discovery-ran"\n')
         (core / "aetherion-agent-router.sh").write_text("# fixture\n")
         (intelligence / "discover-agents.py").write_text("# fixture\n")
         (intelligence / "resolve-task-agent.py").write_text("# fixture\n")
@@ -55,7 +55,25 @@ class AwarenessValidationStatusTests(unittest.TestCase):
         result = self.run_validator()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("FAILED: 0", result.stdout)
+        self.assertTrue((self.home / "discovery-ran").is_file(), result.stdout)
         self.assertIn("AETHERION AWARENESS LAYER OPERATIONAL", result.stdout)
+
+    def test_discovery_nonzero_with_repositories_marker_is_failure(self):
+        (self.repo / "runtime/core/aetherion-discover").write_text(
+            '#!/usr/bin/env bash\nprintf "Repositories: 1\\n"\nexit 9\n'
+        )
+        result = self.run_validator()
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("✗ Discovery execution failed", result.stdout)
+        self.assertNotIn("AETHERION AWARENESS LAYER OPERATIONAL", result.stdout)
+
+    def test_discovery_zero_without_repositories_marker_is_failure(self):
+        (self.repo / "runtime/core/aetherion-discover").write_text(
+            '#!/usr/bin/env bash\nprintf "Discovery Complete\\n"\n'
+        )
+        result = self.run_validator()
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("✗ Discovery execution failed", result.stdout)
 
     def test_missing_architecture_file_is_nonzero(self):
         (self.repo / "runtime/core/aetherion-agent-router.sh").unlink()
