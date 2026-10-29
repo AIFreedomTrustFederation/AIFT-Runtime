@@ -55,10 +55,10 @@ class VerifyAetherionHTTPTests(unittest.TestCase):
             '(( is_models )) && code="$MOCK_MODELS_STATUS"\n'
             'if [[ "$code" == 500 ]]; then\n'
             '  if (( fail )); then exit 22; fi\n'
-            '  echo '{"error":"models unavailable"}'\n'
+            '  echo \'{"error":"models unavailable"}\'\n'
             '  exit 0\n'
             'fi\n'
-            'if (( is_models )); then echo '{"object":"list","models":[],"data":[]}'; else echo ok; fi\n'
+            'if (( is_models )); then echo \'{"object":"list","models":[],"data":[]}\' ; else echo ok; fi\n'
         )
         fake_curl.chmod(0o755)
         self.env = os.environ.copy()
