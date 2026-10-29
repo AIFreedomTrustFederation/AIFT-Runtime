@@ -56,7 +56,7 @@ for item in os.listdir(ROOT):
     if not os.path.isdir(path):
         continue
 
-    if item in ignore:
+    if item in ignore or item == "registry":
         continue
 
     info={
@@ -174,15 +174,44 @@ for item in os.listdir(ROOT):
     repos.append(info)
 
 
-with open(
-os.path.join(REG,"system-map.json"),
-"w"
-) as f:
-    json.dump(
-        repos,
-        f,
-        indent=2
+# The generated registry may not exist on a fresh AIFT workspace.
+os.makedirs(REG, exist_ok=True)
+
+def write_json_atomic(filename, value):
+    """Publish one complete JSON file, leaving the previous version on failure.
+
+    This is per-file atomicity, not a transaction across all five registry files.
+    The temporary file lives on the destination filesystem for os.replace().
+    """
+    import stat
+    import tempfile
+
+    target = os.path.join(REG, filename)
+    fd, temporary = tempfile.mkstemp(
+        prefix=".aetherion-", suffix=".tmp", dir=REG
     )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as output:
+            json.dump(value, output, indent=2)
+            output.flush()
+            os.fsync(output.fileno())
+
+        if os.path.exists(target):
+            mode = stat.S_IMODE(os.stat(target).st_mode)
+        else:
+            # Match the permissions of a normal open(..., "w") under umask.
+            mask = os.umask(0)
+            os.umask(mask)
+            mode = 0o666 & ~mask
+        os.chmod(temporary, mode)
+        os.replace(temporary, target)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+
+write_json_atomic("system-map.json", repos)
 
 
 capabilities={}
@@ -199,15 +228,7 @@ for repo in repos:
         )
 
 
-with open(
-os.path.join(REG,"capability-graph.json"),
-"w"
-) as f:
-    json.dump(
-        capabilities,
-        f,
-        indent=2
-    )
+write_json_atomic("capability-graph.json", capabilities)
 
 
 dependencies=[]
@@ -224,15 +245,7 @@ for repo in repos:
     })
 
 
-with open(
-os.path.join(REG,"dependency-map.json"),
-"w"
-) as f:
-    json.dump(
-        dependencies,
-        f,
-        indent=2
-    )
+write_json_atomic("dependency-map.json", dependencies)
 
 
 architecture={
@@ -252,15 +265,7 @@ len(repos),
 }
 
 
-with open(
-os.path.join(REG,"architecture-map.json"),
-"w"
-) as f:
-    json.dump(
-        architecture,
-        f,
-        indent=2
-    )
+write_json_atomic("architecture-map.json", architecture)
 
 
 missing=[
@@ -274,15 +279,7 @@ missing=[
 ]
 
 
-with open(
-os.path.join(REG,"missing-capabilities.json"),
-"w"
-) as f:
-    json.dump(
-        missing,
-        f,
-        indent=2
-    )
+write_json_atomic("missing-capabilities.json", missing)
 
 
 print()
