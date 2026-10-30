@@ -403,15 +403,18 @@ class RegistryVerifierTests(unittest.TestCase):
         payload = self.registry / FILES[0]
         calls = 0
 
-        def replace_before_recheck(path, limit):
+        def replace_after_first_read(path, limit):
             nonlocal calls
+            data = original(path, limit)
             if path == payload:
                 calls += 1
-                if calls == 2:
-                    payload.write_bytes(payload.read_bytes() + b"\\n")
-            return original(path, limit)
+                if calls == 1:
+                    # Return old bytes after the on-disk payload is replaced.
+                    # The previous one-pass verifier incorrectly accepted it.
+                    payload.write_bytes(data + bytes([10]))
+            return data
 
-        with mock.patch.object(verifier, "read_regular_file", side_effect=replace_before_recheck):
+        with mock.patch.object(verifier, "read_regular_file", side_effect=replace_after_first_read):
             with self.assertRaisesRegex(
                 verifier.RegistryError, "registry changed during verification: system-map.json"
             ):
