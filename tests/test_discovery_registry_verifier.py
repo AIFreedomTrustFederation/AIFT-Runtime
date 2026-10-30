@@ -33,7 +33,7 @@ class RegistryVerifierTests(unittest.TestCase):
         self.registry = self.home / "AIFT" / "registry"
         self.registry.mkdir(parents=True)
         for filename in FILES:
-            value = [] if filename == "system-map.json" else (
+            value = [] if filename in ("system-map.json", "dependency-map.json") else (
                 {"repositories": 0} if filename == "architecture-map.json" else {}
             )
             (self.registry / filename).write_text(json.dumps(value) + "\n", encoding="utf-8")
@@ -86,6 +86,66 @@ class RegistryVerifierTests(unittest.TestCase):
         result = self.run_cli()
         self.assertEqual(result.returncode, 1, result.stdout)
         self.assertIn("invalid repository inventory", result.stdout)
+
+    def set_inventory_projection(self, inventory, dependencies):
+        (self.registry / "system-map.json").write_text(json.dumps(inventory))
+        (self.registry / "architecture-map.json").write_text(
+            json.dumps({"repositories": len(inventory)})
+        )
+        (self.registry / "dependency-map.json").write_text(json.dumps(dependencies))
+        self.write_manifest()
+
+    def test_nonempty_dependency_projection_is_accepted(self):
+        self.set_inventory_projection(
+            [{"name": "AIFT-OS", "package_managers": ["go"]}],
+            [{"repository": "AIFT-OS", "dependencies": ["go"]}],
+        )
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_wrong_dependency_fails_even_with_valid_manifest_hashes(self):
+        self.set_inventory_projection(
+            [{"name": "AIFT-OS", "package_managers": ["go"]}],
+            [{"repository": "AIFT-OS", "dependencies": ["npm"]}],
+        )
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("dependency map does not match", result.stdout)
+
+    def test_missing_dependency_entry_fails(self):
+        self.set_inventory_projection(
+            [{"name": "AIFT-OS", "package_managers": ["go"]}], []
+        )
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("dependency map does not match", result.stdout)
+
+    def test_duplicate_dependency_entry_fails(self):
+        self.set_inventory_projection(
+            [{"name": "AIFT-OS", "package_managers": ["go"]},
+             {"name": "AIFT-Runtime", "package_managers": ["npm"]}],
+            [{"repository": "AIFT-OS", "dependencies": ["go"]},
+             {"repository": "AIFT-OS", "dependencies": ["go"]}],
+        )
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("duplicate dependency-map.json", result.stdout)
+
+    def test_malformed_dependency_map_fails(self):
+        self.set_inventory_projection([], {})
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("dependency map does not match", result.stdout)
+
+    def test_duplicate_system_repository_identity_fails(self):
+        self.set_inventory_projection(
+            [{"name": "AIFT-OS", "package_managers": ["go"]},
+             {"name": "AIFT-OS", "package_managers": ["npm"]}],
+            [{"repository": "AIFT-OS", "dependencies": ["go"]}],
+        )
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("duplicate repository identity", result.stdout)
 
     def test_missing_manifest_fails_closed(self):
         (self.registry / "registry-manifest.json").unlink()

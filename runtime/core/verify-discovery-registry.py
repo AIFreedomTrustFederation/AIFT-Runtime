@@ -95,6 +95,35 @@ def verify_registry(registry: Path) -> str:
     if type(count) is not int or count != len(inventory):
         raise RegistryError("repository count mismatch: architecture-map.json vs system-map.json")
 
+    # The dependency map must be an exact projection of the inventory's
+    # repository identities and package-manager declarations. Matching hashes
+    # alone cannot establish that two independently serialized maps agree.
+    expected = {}
+    for entry in inventory:
+        if not isinstance(entry, dict) or not isinstance(entry.get("name"), str) or not entry["name"]:
+            raise RegistryError("invalid repository identity in system-map.json")
+        managers = entry.get("package_managers")
+        if not isinstance(managers, list) or any(not isinstance(manager, str) for manager in managers):
+            raise RegistryError("invalid package managers in system-map.json")
+        if entry["name"] in expected:
+            raise RegistryError("duplicate repository identity in system-map.json")
+        expected[entry["name"]] = managers
+
+    dependencies = parsed["dependency-map.json"]
+    if not isinstance(dependencies, list) or len(dependencies) != len(expected):
+        raise RegistryError("dependency map does not match repository inventory")
+    observed = {}
+    for entry in dependencies:
+        if (not isinstance(entry, dict) or not isinstance(entry.get("repository"), str)
+                or not isinstance(entry.get("dependencies"), list)):
+            raise RegistryError("invalid dependency-map.json entry")
+        name, managers = entry["repository"], entry["dependencies"]
+        if name in observed or any(not isinstance(manager, str) for manager in managers):
+            raise RegistryError("invalid or duplicate dependency-map.json entry")
+        observed[name] = managers
+    if observed != expected:
+        raise RegistryError("dependency map does not match repository inventory")
+
     # Detect a manifest refresh during the read, including a same-generation
     # rewrite with different formatting. This is not a filesystem transaction.
     if read_regular_file(manifest_path, MAX_MANIFEST_BYTES) != first:
