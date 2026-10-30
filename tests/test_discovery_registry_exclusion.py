@@ -209,5 +209,54 @@ class DiscoveryRegistryExclusionTests(unittest.TestCase):
         self.assertNotIn("registry", {repo["name"] for repo in second})
 
 
+    def test_registry_generation_is_invariant_to_filesystem_iteration_order(self):
+        """Identical inventory must have identical bytes and generation ID."""
+        os_repo = self.aift / "AIFT-OS"
+        for name in ("z-subdir", "a-subdir"):
+            directory = os_repo / name
+            directory.mkdir()
+            (directory / "z-guide.md").write_text("# Guide\\n")
+            (directory / "a-source.py").write_text("pass\\n")
+
+        # Force opposite os.listdir/os.walk enumeration orders in the actual
+        # generator process, independent of the host filesystem's readdir order.
+        hooks = self.home / "order-hooks"
+        hooks.mkdir()
+        (hooks / "sitecustomize.py").write_text(
+            "import os\\n"
+            "_listdir = os.listdir\\n"
+            "_walk = os.walk\\n"
+            "def reordered_listdir(path):\\n"
+            "    entries = _listdir(path)\\n"
+            "    if os.path.abspath(os.fspath(path)) == os.path.expanduser('~/AIFT'):\\n"
+            "        return sorted(entries, reverse=os.environ.get('AIFT_REVERSE_ORDER') == '1')\\n"
+            "    return entries\\n"
+            "def reordered_walk(path, *args, **kwargs):\\n"
+            "    for root, dirs, files in _walk(path, *args, **kwargs):\\n"
+            "        reverse = os.environ.get('AIFT_REVERSE_ORDER') == '1'\\n"
+            "        dirs[:] = sorted(dirs, reverse=reverse)\\n"
+            "        files[:] = sorted(files, reverse=reverse)\\n"
+            "        yield root, dirs, files\\n"
+            "os.listdir = reordered_listdir\\n"
+            "os.walk = reordered_walk\\n"
+        )
+        snapshots = []
+        for reverse in ("0", "1"):
+            env = dict(os.environ, HOME=str(self.home), PYTHONPATH=str(hooks),
+                       AIFT_REVERSE_ORDER=reverse)
+            result = subprocess.run(
+                [BASH, str(SCRIPT)], env=env, cwd=self.home,
+                capture_output=True, text=True, timeout=15, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            snapshots.append({
+                name: (self.registry / name).read_bytes()
+                for name in ("system-map.json", "capability-graph.json",
+                             "dependency-map.json", "architecture-map.json",
+                             "missing-capabilities.json", "registry-manifest.json")
+            })
+        self.assertEqual(snapshots[0], snapshots[1])
+
+
 if __name__ == "__main__":
     unittest.main()
