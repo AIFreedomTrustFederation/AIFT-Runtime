@@ -33,7 +33,10 @@ class RegistryVerifierTests(unittest.TestCase):
         self.registry = self.home / "AIFT" / "registry"
         self.registry.mkdir(parents=True)
         for filename in FILES:
-            (self.registry / filename).write_text("{}\n", encoding="utf-8")
+            value = [] if filename == "system-map.json" else (
+                {"repositories": 0} if filename == "architecture-map.json" else {}
+            )
+            (self.registry / filename).write_text(json.dumps(value) + "\n", encoding="utf-8")
         self.write_manifest()
 
     def write_manifest(self):
@@ -62,6 +65,27 @@ class RegistryVerifierTests(unittest.TestCase):
         self.assertEqual(output["status"], "passed")
         self.assertEqual(output["files_verified"], 5)
         self.assertEqual(output["generation_id"], verifier.verify_registry(self.registry))
+
+    def test_inconsistent_repository_count_fails_even_with_matching_hashes(self):
+        (self.registry / "architecture-map.json").write_text('{"repositories": 1}')
+        self.write_manifest()
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("repository count mismatch", result.stdout)
+
+    def test_boolean_repository_count_fails(self):
+        (self.registry / "architecture-map.json").write_text('{"repositories": true}')
+        self.write_manifest()
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("repository count mismatch", result.stdout)
+
+    def test_nonlist_system_map_fails_even_with_matching_hashes(self):
+        (self.registry / "system-map.json").write_text('{}')
+        self.write_manifest()
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("invalid repository inventory", result.stdout)
 
     def test_missing_manifest_fails_closed(self):
         (self.registry / "registry-manifest.json").unlink()

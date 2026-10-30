@@ -78,11 +78,22 @@ def verify_registry(registry: Path) -> str:
     if manifest["generation_id"] != generation:
         raise RegistryError("manifest generation identifier mismatch")
 
+    parsed = {}
     for name in FILES:
         raw = read_regular_file(registry / name, MAX_FILE_BYTES)
         if hashlib.sha256(raw).hexdigest() != digests[name]:
             raise RegistryError(f"digest mismatch: {name}")
-        parse_json(raw, name)
+        parsed[name] = parse_json(raw, name)
+
+    # A manifest can hash perfectly while binding contradictory inventory data.
+    # Require the generated architecture count to agree with the system map.
+    inventory = parsed["system-map.json"]
+    if not isinstance(inventory, list):
+        raise RegistryError("invalid repository inventory: system-map.json must be an array")
+    architecture = parsed["architecture-map.json"]
+    count = architecture.get("repositories") if isinstance(architecture, dict) else None
+    if type(count) is not int or count != len(inventory):
+        raise RegistryError("repository count mismatch: architecture-map.json vs system-map.json")
 
     # Detect a manifest refresh during the read, including a same-generation
     # rewrite with different formatting. This is not a filesystem transaction.
