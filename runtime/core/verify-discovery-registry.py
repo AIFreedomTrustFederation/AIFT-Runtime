@@ -52,8 +52,18 @@ def read_regular_file(path: Path, limit: int) -> bytes:
 
 
 def parse_json(raw: bytes, filename: str):
+    # Python's default JSON parser silently keeps the last duplicate key.
+    # Reject ambiguous objects even when a manifest correctly hashes the bytes.
+    def unique_keys(pairs):
+        value = {}
+        for key, item in pairs:
+            if key in value:
+                raise RegistryError(f"duplicate JSON key: {filename}")
+            value[key] = item
+        return value
+
     try:
-        return json.loads(raw.decode("utf-8"))
+        return json.loads(raw.decode("utf-8"), object_pairs_hook=unique_keys)
     except (UnicodeDecodeError, ValueError) as error:
         raise RegistryError(f"invalid JSON: {filename}") from error
 
