@@ -173,6 +173,15 @@ def verify_registry(registry: Path) -> str:
     # rewrite with different formatting. This is not a filesystem transaction.
     if read_regular_file(manifest_path, MAX_MANIFEST_BYTES) != first:
         raise RegistryError("manifest changed during registry read")
+
+    # A writer can replace a payload after its first digest check while leaving
+    # the manifest untouched. Recheck every payload before reporting success.
+    # This narrows the race window but does not make multi-file reads atomic.
+    for name in FILES:
+        if hashlib.sha256(read_regular_file(registry / name, MAX_FILE_BYTES)).hexdigest() != digests[name]:
+            raise RegistryError(f"registry changed during verification: {name}")
+    if read_regular_file(manifest_path, MAX_MANIFEST_BYTES) != first:
+        raise RegistryError("manifest changed during registry read")
     return generation
 
 

@@ -396,6 +396,44 @@ class RegistryVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(verifier.RegistryError, "changed during registry read"):
                 verifier.verify_registry(self.registry)
 
+    def test_payload_replacement_after_first_read_fails_closed(self):
+        # Reproduce a writer replacing a previously verified file without
+        # updating the manifest. The original one-pass verifier returned pass.
+        original = verifier.read_regular_file
+        payload = self.registry / FILES[0]
+        calls = 0
+
+        def replace_before_recheck(path, limit):
+            nonlocal calls
+            if path == payload:
+                calls += 1
+                if calls == 2:
+                    payload.write_bytes(payload.read_bytes() + b"\\n")
+            return original(path, limit)
+
+        with mock.patch.object(verifier, "read_regular_file", side_effect=replace_before_recheck):
+            with self.assertRaisesRegex(
+                verifier.RegistryError, "registry changed during verification: system-map.json"
+            ):
+                verifier.verify_registry(self.registry)
+
+    def test_manifest_replacement_during_payload_recheck_fails_closed(self):
+        original = verifier.read_regular_file
+        manifest = self.registry / "registry-manifest.json"
+        calls = 0
+
+        def replace_before_final_manifest_read(path, limit):
+            nonlocal calls
+            if path == manifest:
+                calls += 1
+                if calls == 3:
+                    manifest.write_bytes(manifest.read_bytes() + b"\\n")
+            return original(path, limit)
+
+        with mock.patch.object(verifier, "read_regular_file", side_effect=replace_before_final_manifest_read):
+            with self.assertRaisesRegex(verifier.RegistryError, "manifest changed during registry read"):
+                verifier.verify_registry(self.registry)
+
     def test_missing_payload_fails_closed(self):
         (self.registry / FILES[4]).unlink()
         self.assertEqual(self.run_cli().returncode, 1)
