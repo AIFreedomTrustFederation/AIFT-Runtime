@@ -88,10 +88,18 @@ class RegistryVerifierTests(unittest.TestCase):
         self.assertIn("invalid repository inventory", result.stdout)
 
     def set_inventory_projection(self, inventory, dependencies):
+        inventory = [dict(entry, capabilities=entry.get("capabilities", []))
+                     for entry in inventory]
         (self.registry / "system-map.json").write_text(json.dumps(inventory))
         (self.registry / "architecture-map.json").write_text(
             json.dumps({"repositories": len(inventory)})
         )
+        graph = {}
+        for entry in inventory:
+            for cap in entry["capabilities"]:
+                if isinstance(cap, str):
+                    graph.setdefault(cap, []).append(entry["name"])
+        (self.registry / "capability-graph.json").write_text(json.dumps(graph))
         (self.registry / "dependency-map.json").write_text(json.dumps(dependencies))
         self.write_manifest()
 
@@ -147,6 +155,67 @@ class RegistryVerifierTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout)
         self.assertIn("duplicate repository identity", result.stdout)
 
+    def test_nonempty_capability_projection_is_accepted(self):
+        self.set_inventory_projection(
+            [{"name": "AIFT-OS", "package_managers": ["go"],
+              "capabilities": ["automation", "documentation"]},
+             {"name": "AIFT-Runtime", "package_managers": ["pip"],
+              "capabilities": ["automation"]}],
+            [{"repository": "AIFT-OS", "dependencies": ["go"]},
+             {"repository": "AIFT-Runtime", "dependencies": ["pip"]}],
+        )
+        self.assertEqual(self.run_cli().returncode, 0)
+
+    def test_missing_capability_link_fails_with_valid_manifest(self):
+        self.set_inventory_projection(
+            [{"name": "AIFT-OS", "package_managers": ["go"],
+              "capabilities": ["automation"]}],
+            [{"repository": "AIFT-OS", "dependencies": ["go"]}],
+        )
+        (self.registry / "capability-graph.json").write_text("{}")
+        self.write_manifest()
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("capability graph does not match", result.stdout)
+
+    def test_unknown_capability_repository_fails_with_valid_manifest(self):
+        self.set_inventory_projection(
+            [{"name": "AIFT-OS", "package_managers": ["go"],
+              "capabilities": ["automation"]}],
+            [{"repository": "AIFT-OS", "dependencies": ["go"]}],
+        )
+        (self.registry / "capability-graph.json").write_text(
+            '{"automation": ["AIFT-OS", "Unknown"]}'
+        )
+        self.write_manifest()
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("capability graph does not match", result.stdout)
+
+    def test_duplicate_capability_link_fails_with_valid_manifest(self):
+        self.set_inventory_projection(
+            [{"name": "AIFT-OS", "package_managers": ["go"],
+              "capabilities": ["automation"]}],
+            [{"repository": "AIFT-OS", "dependencies": ["go"]}],
+        )
+        (self.registry / "capability-graph.json").write_text(
+            '{"automation": ["AIFT-OS", "AIFT-OS"]}'
+        )
+        self.write_manifest()
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("capability graph does not match", result.stdout)
+
+    def test_invalid_inventory_capability_list_fails(self):
+        self.set_inventory_projection(
+            [{"name": "AIFT-OS", "package_managers": ["go"],
+              "capabilities": ["automation", "automation"]}],
+            [{"repository": "AIFT-OS", "dependencies": ["go"]}],
+        )
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("invalid capabilities in system-map.json", result.stdout)
+
     def test_duplicate_manifest_key_fails_closed(self):
         manifest = self.registry / "registry-manifest.json"
         content = manifest.read_text(encoding="utf-8")
@@ -196,7 +265,7 @@ class RegistryVerifierTests(unittest.TestCase):
         self.assertIn("non-finite JSON number", result.stdout)
 
     def test_finite_float_payload_remains_valid(self):
-        (self.registry / "capability-graph.json").write_text(
+        (self.registry / "missing-capabilities.json").write_text(
             '{"nested": {"risk": 1.25}}', encoding="utf-8"
         )
         self.write_manifest()

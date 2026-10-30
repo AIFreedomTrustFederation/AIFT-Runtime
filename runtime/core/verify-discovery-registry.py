@@ -145,6 +145,20 @@ def verify_registry(registry: Path) -> str:
     if observed != expected:
         raise RegistryError("dependency map does not match repository inventory")
 
+    # Capability links are another generated projection of the same inventory.
+    # A correctly hashed but contradictory graph must not pass verification.
+    expected_capabilities = {}
+    for entry in inventory:
+        capabilities = entry.get("capabilities")
+        if (not isinstance(capabilities, list) or
+                any(not isinstance(cap, str) or not cap for cap in capabilities) or
+                len(set(capabilities)) != len(capabilities)):
+            raise RegistryError("invalid capabilities in system-map.json")
+        for cap in capabilities:
+            expected_capabilities.setdefault(cap, []).append(entry["name"])
+    if parsed["capability-graph.json"] != expected_capabilities:
+        raise RegistryError("capability graph does not match repository inventory")
+
     # Detect a manifest refresh during the read, including a same-generation
     # rewrite with different formatting. This is not a filesystem transaction.
     if read_regular_file(manifest_path, MAX_MANIFEST_BYTES) != first:
