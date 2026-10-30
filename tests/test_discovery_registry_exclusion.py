@@ -167,13 +167,13 @@ class DiscoveryRegistryExclusionTests(unittest.TestCase):
         hooks = self.home / "late-hooks"
         hooks.mkdir()
         (hooks / "sitecustomize.py").write_text(
-            "import os\\n"
-            "_replace = os.replace\\n"
-            "def reject_architecture(src, dst):\\n"
-            "    if os.fspath(dst).endswith('/architecture-map.json'):\\n"
-            "        raise OSError('injected late registry failure')\\n"
-            "    return _replace(src, dst)\\n"
-            "os.replace = reject_architecture\\n"
+            "import os\n"
+            "_replace = os.replace\n"
+            "def reject_architecture(src, dst):\n"
+            "    if os.fspath(dst).endswith('/architecture-map.json'):\n"
+            "        raise OSError('injected late registry failure')\n"
+            "    return _replace(src, dst)\n"
+            "os.replace = reject_architecture\n"
         )
         env = dict(os.environ, HOME=str(self.home), PYTHONPATH=str(hooks))
         result = subprocess.run(
