@@ -147,6 +147,36 @@ class RegistryVerifierTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout)
         self.assertIn("duplicate repository identity", result.stdout)
 
+    def test_duplicate_manifest_key_fails_closed(self):
+        manifest = self.registry / "registry-manifest.json"
+        content = manifest.read_text(encoding="utf-8")
+        self.assertIn('"algorithm": "sha256"', content)
+        manifest.write_text(content.replace(
+            '"algorithm": "sha256"',
+            '"algorithm": "sha256", "algorithm": "sha256"', 1,
+        ), encoding="utf-8")
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("duplicate JSON key: registry-manifest.json", result.stdout)
+
+    def test_duplicate_payload_key_fails_with_matching_hashes(self):
+        (self.registry / "architecture-map.json").write_text(
+            '{"repositories": 0, "repositories": 0}', encoding="utf-8"
+        )
+        self.write_manifest()
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("duplicate JSON key: architecture-map.json", result.stdout)
+
+    def test_nested_duplicate_payload_key_fails_with_matching_hashes(self):
+        (self.registry / "capability-graph.json").write_text(
+            '{"nested": {"enabled": true, "enabled": true}}', encoding="utf-8"
+        )
+        self.write_manifest()
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("duplicate JSON key: capability-graph.json", result.stdout)
+
     def test_missing_manifest_fails_closed(self):
         (self.registry / "registry-manifest.json").unlink()
         self.assertEqual(self.run_cli().returncode, 1)
