@@ -8,6 +8,7 @@ not producer authenticity, repository identity, or federation acceptance.
 import argparse
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -62,8 +63,18 @@ def parse_json(raw: bytes, filename: str):
             value[key] = item
         return value
 
+    def reject_constant(_value):
+        raise RegistryError(f"non-finite JSON number: {filename}")
+
+    def finite_float(token):
+        number = float(token)
+        if not math.isfinite(number):
+            raise RegistryError(f"non-finite JSON number: {filename}")
+        return number
+
     try:
-        return json.loads(raw.decode("utf-8"), object_pairs_hook=unique_keys)
+        return json.loads(raw.decode("utf-8"), object_pairs_hook=unique_keys,
+                          parse_constant=reject_constant, parse_float=finite_float)
     except (UnicodeDecodeError, ValueError) as error:
         raise RegistryError(f"invalid JSON: {filename}") from error
 

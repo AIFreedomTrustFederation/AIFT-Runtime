@@ -177,6 +177,32 @@ class RegistryVerifierTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout)
         self.assertIn("duplicate JSON key: capability-graph.json", result.stdout)
 
+    def test_nonfinite_literal_payload_fails_with_matching_hashes(self):
+        (self.registry / "capability-graph.json").write_text(
+            '{"nested": {"state": NaN}}', encoding="utf-8"
+        )
+        self.write_manifest()
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("non-finite JSON number", result.stdout)
+
+    def test_overflowed_exponent_payload_fails_with_matching_hashes(self):
+        (self.registry / "missing-capabilities.json").write_text(
+            '{"nested": {"risk": 1e9999}}', encoding="utf-8"
+        )
+        self.write_manifest()
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("non-finite JSON number", result.stdout)
+
+    def test_finite_float_payload_remains_valid(self):
+        (self.registry / "capability-graph.json").write_text(
+            '{"nested": {"risk": 1.25}}', encoding="utf-8"
+        )
+        self.write_manifest()
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 0, result.stdout)
+
     def test_missing_manifest_fails_closed(self):
         (self.registry / "registry-manifest.json").unlink()
         self.assertEqual(self.run_cli().returncode, 1)
