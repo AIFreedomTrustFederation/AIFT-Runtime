@@ -33,7 +33,8 @@ class RegistryVerifierTests(unittest.TestCase):
         self.registry = self.home / "AIFT" / "registry"
         self.registry.mkdir(parents=True)
         for filename in FILES:
-            value = [] if filename in ("system-map.json", "dependency-map.json") else (
+            value = [] if filename in ("system-map.json", "dependency-map.json",
+                                   "missing-capabilities.json") else (
                 {"repositories": 0} if filename == "architecture-map.json" else {}
             )
             (self.registry / filename).write_text(json.dumps(value) + "\n", encoding="utf-8")
@@ -265,12 +266,49 @@ class RegistryVerifierTests(unittest.TestCase):
         self.assertIn("non-finite JSON number", result.stdout)
 
     def test_finite_float_payload_remains_valid(self):
-        (self.registry / "missing-capabilities.json").write_text(
-            '{"nested": {"risk": 1.25}}', encoding="utf-8"
+        (self.registry / "architecture-map.json").write_text(
+            '{"repositories": 0, "confidence": 1.25}', encoding="utf-8"
         )
         self.write_manifest()
         result = self.run_cli()
         self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_nonempty_missing_capabilities_list_is_accepted(self):
+        (self.registry / "missing-capabilities.json").write_text(
+            '["multi-agent planner", "validation engine"]', encoding="utf-8"
+        )
+        self.write_manifest()
+        self.assertEqual(self.run_cli().returncode, 0)
+
+    def test_missing_capabilities_object_fails_with_matching_hashes(self):
+        (self.registry / "missing-capabilities.json").write_text('{}', encoding="utf-8")
+        self.write_manifest()
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("invalid missing capabilities", result.stdout)
+
+    def test_missing_capabilities_nonstring_fails_with_matching_hashes(self):
+        (self.registry / "missing-capabilities.json").write_text('[42]', encoding="utf-8")
+        self.write_manifest()
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("invalid missing capabilities", result.stdout)
+
+    def test_missing_capabilities_blank_label_fails(self):
+        (self.registry / "missing-capabilities.json").write_text('["  "]', encoding="utf-8")
+        self.write_manifest()
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("invalid missing capabilities", result.stdout)
+
+    def test_missing_capabilities_duplicate_fails_with_matching_hashes(self):
+        (self.registry / "missing-capabilities.json").write_text(
+            '["validation engine", "validation engine"]', encoding="utf-8"
+        )
+        self.write_manifest()
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("invalid missing capabilities", result.stdout)
 
     def test_excessively_nested_payload_fails_with_machine_readable_result(self):
         # A valid manifest hash cannot make pathological JSON safe to parse.

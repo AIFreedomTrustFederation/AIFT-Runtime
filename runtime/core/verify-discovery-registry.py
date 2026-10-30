@@ -161,6 +161,14 @@ def verify_registry(registry: Path) -> str:
     if parsed["capability-graph.json"] != expected_capabilities:
         raise RegistryError("capability graph does not match repository inventory")
 
+    # The missing-capabilities output is a list of distinct, nonblank labels.
+    # Hash consistency alone cannot make an object or malformed list usable.
+    missing = parsed["missing-capabilities.json"]
+    if (not isinstance(missing, list)
+            or any(not isinstance(item, str) or not item.strip() for item in missing)
+            or len(set(missing)) != len(missing)):
+        raise RegistryError("invalid missing capabilities in missing-capabilities.json")
+
     # Detect a manifest refresh during the read, including a same-generation
     # rewrite with different formatting. This is not a filesystem transaction.
     if read_regular_file(manifest_path, MAX_MANIFEST_BYTES) != first:
