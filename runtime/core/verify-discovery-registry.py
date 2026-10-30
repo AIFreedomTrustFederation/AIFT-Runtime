@@ -179,9 +179,14 @@ def verify_registry(registry: Path) -> str:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--registry", type=Path, default=Path.home() / "AIFT" / "registry")
+    parser.add_argument("--expect-generation", help="Require a specific SHA-256 registry generation")
     args = parser.parse_args(argv)
     try:
+        if args.expect_generation is not None and not re.fullmatch(r"[0-9a-f]{64}", args.expect_generation):
+            raise RegistryError("invalid expected generation identifier")
         generation = verify_registry(args.registry)
+        if args.expect_generation is not None and generation != args.expect_generation:
+            raise RegistryError("registry generation does not match expected identifier")
         result = {"schema": "aift.runtime.registry-check.v1", "status": "passed",
                   "generation_id": generation, "files_verified": len(FILES)}
         code = 0

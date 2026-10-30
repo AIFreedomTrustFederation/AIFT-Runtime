@@ -53,9 +53,9 @@ class RegistryVerifierTests(unittest.TestCase):
         (self.registry / "registry-manifest.json").write_text(json.dumps(manifest))
         return generation
 
-    def run_cli(self):
+    def run_cli(self, *extra):
         return subprocess.run(
-            [sys.executable, str(VERIFIER), "--registry", str(self.registry)],
+            [sys.executable, str(VERIFIER), "--registry", str(self.registry), *extra],
             capture_output=True, text=True, check=False, timeout=15,
         )
 
@@ -66,6 +66,31 @@ class RegistryVerifierTests(unittest.TestCase):
         self.assertEqual(output["status"], "passed")
         self.assertEqual(output["files_verified"], 5)
         self.assertEqual(output["generation_id"], verifier.verify_registry(self.registry))
+
+    def test_expected_generation_accepts_exact_snapshot(self):
+        generation = self.write_manifest()
+        result = self.run_cli("--expect-generation", generation)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(json.loads(result.stdout)["generation_id"], generation)
+
+    def test_expected_generation_rejects_new_valid_snapshot(self):
+        old_generation = self.write_manifest()
+        (self.registry / "missing-capabilities.json").write_text(
+            '["validation engine"]', encoding="utf-8"
+        )
+        new_generation = self.write_manifest()
+        self.assertNotEqual(old_generation, new_generation)
+        self.assertEqual(self.run_cli().returncode, 0)
+        result = self.run_cli("--expect-generation", old_generation)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertEqual(result.stderr, "")
+        self.assertIn("generation does not match expected", json.loads(result.stdout)["reason"])
+
+    def test_expected_generation_rejects_malformed_identifier(self):
+        result = self.run_cli("--expect-generation", "not-a-sha256")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertEqual(result.stderr, "")
+        self.assertIn("invalid expected generation", json.loads(result.stdout)["reason"])
 
     def test_inconsistent_repository_count_fails_even_with_matching_hashes(self):
         (self.registry / "architecture-map.json").write_text('{"repositories": 1}')
