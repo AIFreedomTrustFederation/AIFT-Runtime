@@ -272,6 +272,18 @@ class RegistryVerifierTests(unittest.TestCase):
         result = self.run_cli()
         self.assertEqual(result.returncode, 0, result.stdout)
 
+    def test_excessively_nested_payload_fails_with_machine_readable_result(self):
+        # A valid manifest hash cannot make pathological JSON safe to parse.
+        nested = "[" * 20000 + "0" + "]" * 20000
+        (self.registry / "missing-capabilities.json").write_text(nested, encoding="utf-8")
+        self.write_manifest()
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertEqual(result.stderr, "")
+        response = json.loads(result.stdout)
+        self.assertEqual(response["status"], "failed")
+        self.assertIn("invalid JSON: missing-capabilities.json", response["reason"])
+
     def test_missing_manifest_fails_closed(self):
         (self.registry / "registry-manifest.json").unlink()
         self.assertEqual(self.run_cli().returncode, 1)

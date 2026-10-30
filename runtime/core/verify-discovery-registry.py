@@ -75,7 +75,9 @@ def parse_json(raw: bytes, filename: str):
     try:
         return json.loads(raw.decode("utf-8"), object_pairs_hook=unique_keys,
                           parse_constant=reject_constant, parse_float=finite_float)
-    except (UnicodeDecodeError, ValueError) as error:
+    except (UnicodeDecodeError, ValueError, RecursionError) as error:
+        # A bounded file can still exceed the JSON decoder's nesting limit.
+        # Keep every rejected snapshot machine-readable rather than traceback.
         raise RegistryError(f"invalid JSON: {filename}") from error
 
 
