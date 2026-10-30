@@ -281,6 +281,35 @@ missing=[
 
 write_json_atomic("missing-capabilities.json", missing)
 
+# Publish a hash manifest LAST. A failed/interrupted multi-file refresh leaves
+# the previous manifest behind, so consumers can detect mixed generations.
+# This is detection, not a transaction or an authenticated attestation.
+import hashlib
+registry_files = (
+    "system-map.json",
+    "capability-graph.json",
+    "dependency-map.json",
+    "architecture-map.json",
+    "missing-capabilities.json",
+)
+digests = {}
+for filename in registry_files:
+    digest = hashlib.sha256()
+    with open(os.path.join(REG, filename), "rb") as source:
+        for chunk in iter(lambda: source.read(65536), b""):
+            digest.update(chunk)
+    digests[filename] = digest.hexdigest()
+
+generation_id = hashlib.sha256(
+    json.dumps(digests, sort_keys=True, separators=(",", ":")).encode("utf-8")
+).hexdigest()
+write_json_atomic("registry-manifest.json", {
+    "schema": "aift.runtime.discovery-registry.v1",
+    "algorithm": "sha256",
+    "generation_id": generation_id,
+    "files": digests,
+})
+
 
 print()
 print("Discovery Complete")
@@ -293,6 +322,7 @@ print("capability-graph.json")
 print("dependency-map.json")
 print("architecture-map.json")
 print("missing-capabilities.json")
+print("registry-manifest.json")
 
 PY
 

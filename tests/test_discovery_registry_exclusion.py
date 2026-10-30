@@ -1,5 +1,6 @@
 """Black-box checks that generated registry state is not counted as a repository."""
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -57,6 +58,7 @@ class DiscoveryRegistryExclusionTests(unittest.TestCase):
         generated = {
             "system-map.json", "capability-graph.json", "dependency-map.json",
             "architecture-map.json", "missing-capabilities.json",
+            "registry-manifest.json",
         }
         self.assertEqual({p.name for p in self.registry.iterdir()}, generated)
         self.assertEqual(
@@ -99,7 +101,7 @@ class DiscoveryRegistryExclusionTests(unittest.TestCase):
             "Failed publication must clean up temporary files",
         )
 
-    def test_all_five_outputs_use_atomic_replacement(self):
+    def test_all_outputs_use_atomic_replacement(self):
         """All registry products must publish via same-directory os.replace."""
         hooks = self.home / "hooks"
         hooks.mkdir()
@@ -125,10 +127,78 @@ class DiscoveryRegistryExclusionTests(unittest.TestCase):
         expected = {
             "system-map.json", "capability-graph.json", "dependency-map.json",
             "architecture-map.json", "missing-capabilities.json",
+            "registry-manifest.json",
         }
         self.assertEqual(set(log_path.read_text().splitlines()), expected)
         self.assertEqual(len(log_path.read_text().splitlines()), len(expected))
+        self.assertEqual(log_path.read_text().splitlines()[-1], "registry-manifest.json")
         self.assertFalse(list(self.registry.glob(".aetherion-*.tmp")))
+
+
+    def test_manifest_binds_exactly_five_registry_outputs(self):
+        self.discover()
+        manifest = self.read("registry-manifest.json")
+        expected = {
+            "system-map.json", "capability-graph.json", "dependency-map.json",
+            "architecture-map.json", "missing-capabilities.json",
+        }
+        self.assertEqual(manifest["schema"], "aift.runtime.discovery-registry.v1")
+        self.assertEqual(manifest["algorithm"], "sha256")
+        self.assertEqual(set(manifest["files"]), expected)
+        for filename, digest in manifest["files"].items():
+            self.assertEqual(len(digest), 64)
+            self.assertEqual(
+                digest, hashlib.sha256((self.registry / filename).read_bytes()).hexdigest()
+            )
+        generation = hashlib.sha256(
+            json.dumps(manifest["files"], sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        self.assertEqual(manifest["generation_id"], generation)
+        before = (self.registry / "registry-manifest.json").read_bytes()
+        self.discover()
+        self.assertEqual((self.registry / "registry-manifest.json").read_bytes(), before)
+
+    def test_interrupted_refresh_keeps_old_manifest_and_exposes_mismatch(self):
+        self.discover()
+        old_manifest = (self.registry / "registry-manifest.json").read_bytes()
+        old_digests = self.read("registry-manifest.json")["files"]
+        (self.aift / "AIFT-OS" / "package.json").write_text('{"name":"changed"}')
+
+        hooks = self.home / "late-hooks"
+        hooks.mkdir()
+        (hooks / "sitecustomize.py").write_text(
+            "import os\\n"
+            "_replace = os.replace\\n"
+            "def reject_architecture(src, dst):\\n"
+            "    if os.fspath(dst).endswith('/architecture-map.json'):\\n"
+            "        raise OSError('injected late registry failure')\\n"
+            "    return _replace(src, dst)\\n"
+            "os.replace = reject_architecture\\n"
+        )
+        env = dict(os.environ, HOME=str(self.home), PYTHONPATH=str(hooks))
+        result = subprocess.run(
+            [BASH, str(SCRIPT)], env=env, cwd=self.home,
+            capture_output=True, text=True, timeout=15, check=False,
+        )
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("injected late registry failure", result.stderr)
+        self.assertEqual((self.registry / "registry-manifest.json").read_bytes(), old_manifest)
+        mismatches = [
+            filename for filename, digest in old_digests.items()
+            if hashlib.sha256((self.registry / filename).read_bytes()).hexdigest() != digest
+        ]
+        self.assertIn("system-map.json", mismatches)
+        self.discover()
+        repaired = self.read("registry-manifest.json")
+        self.assertNotEqual(repaired["generation_id"], self.read_old_generation(old_manifest))
+        for filename, digest in repaired["files"].items():
+            self.assertEqual(
+                hashlib.sha256((self.registry / filename).read_bytes()).hexdigest(), digest
+            )
+
+    @staticmethod
+    def read_old_generation(raw):
+        return json.loads(raw)["generation_id"]
 
     def test_repeated_discovery_does_not_inventory_generated_outputs(self):
         self.discover()

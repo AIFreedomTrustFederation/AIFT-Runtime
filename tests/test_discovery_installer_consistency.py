@@ -1,5 +1,6 @@
 """The standalone installer must not revert maintained discovery-engine fixes."""
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -57,6 +58,10 @@ class DiscoveryInstallerConsistencyTests(unittest.TestCase):
                     json.loads((registry / "architecture-map.json").read_text())["repositories"], 3
                 )
                 self.assertFalse(list(registry.glob(".aetherion-*.tmp")))
+                manifest = json.loads((registry / "registry-manifest.json").read_text())
+                self.assertEqual(len(manifest["files"]), 5)
+                for filename, digest in manifest["files"].items():
+                    self.assertEqual(hashlib.sha256((registry / filename).read_bytes()).hexdigest(), digest)
 
 
 if __name__ == "__main__":
