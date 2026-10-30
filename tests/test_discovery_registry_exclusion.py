@@ -215,30 +215,30 @@ class DiscoveryRegistryExclusionTests(unittest.TestCase):
         for name in ("z-subdir", "a-subdir"):
             directory = os_repo / name
             directory.mkdir()
-            (directory / "z-guide.md").write_text("# Guide\\n")
-            (directory / "a-source.py").write_text("pass\\n")
+            (directory / "z-guide.md").write_text("# Guide\n")
+            (directory / "a-source.py").write_text("pass\n")
 
         # Force opposite os.listdir/os.walk enumeration orders in the actual
         # generator process, independent of the host filesystem's readdir order.
         hooks = self.home / "order-hooks"
         hooks.mkdir()
         (hooks / "sitecustomize.py").write_text(
-            "import os\\n"
-            "_listdir = os.listdir\\n"
-            "_walk = os.walk\\n"
-            "def reordered_listdir(path):\\n"
-            "    entries = _listdir(path)\\n"
-            "    if os.path.abspath(os.fspath(path)) == os.path.expanduser('~/AIFT'):\\n"
-            "        return sorted(entries, reverse=os.environ.get('AIFT_REVERSE_ORDER') == '1')\\n"
-            "    return entries\\n"
-            "def reordered_walk(path, *args, **kwargs):\\n"
-            "    for root, dirs, files in _walk(path, *args, **kwargs):\\n"
-            "        reverse = os.environ.get('AIFT_REVERSE_ORDER') == '1'\\n"
-            "        dirs[:] = sorted(dirs, reverse=reverse)\\n"
-            "        files[:] = sorted(files, reverse=reverse)\\n"
-            "        yield root, dirs, files\\n"
-            "os.listdir = reordered_listdir\\n"
-            "os.walk = reordered_walk\\n"
+            "import os\n"
+            "_listdir = os.listdir\n"
+            "_walk = os.walk\n"
+            "def reordered_listdir(path):\n"
+            "    entries = _listdir(path)\n"
+            "    if os.path.abspath(os.fspath(path)) == os.path.expanduser('~/AIFT'):\n"
+            "        return sorted(entries, reverse=os.environ.get('AIFT_REVERSE_ORDER') == '1')\n"
+            "    return entries\n"
+            "def reordered_walk(path, *args, **kwargs):\n"
+            "    for root, dirs, files in _walk(path, *args, **kwargs):\n"
+            "        reverse = os.environ.get('AIFT_REVERSE_ORDER') == '1'\n"
+            "        dirs[:] = sorted(dirs, reverse=reverse)\n"
+            "        files[:] = sorted(files, reverse=reverse)\n"
+            "        yield root, dirs, files\n"
+            "os.listdir = reordered_listdir\n"
+            "os.walk = reordered_walk\n"
         )
         snapshots = []
         for reverse in ("0", "1"):
