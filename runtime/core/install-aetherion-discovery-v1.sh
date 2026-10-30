@@ -49,7 +49,8 @@ ignore={
 }
 
 
-for item in os.listdir(ROOT):
+# Canonical iteration order keeps the registry generation stable across filesystems.
+for item in sorted(os.listdir(ROOT)):
 
     path=os.path.join(ROOT,item)
 
@@ -72,12 +73,9 @@ for item in os.listdir(ROOT):
 
     for root,dirs,files in os.walk(path):
 
-        dirs[:]=[
-            d for d in dirs
-            if d not in ignore
-        ]
+        dirs[:]=sorted(d for d in dirs if d not in ignore)
 
-        for f in files:
+        for f in sorted(files):
 
             rel=os.path.relpath(
                 os.path.join(root,f),
