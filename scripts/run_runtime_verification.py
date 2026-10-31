@@ -20,16 +20,18 @@ def command_result(command: list[str], root: Path) -> subprocess.CompletedProces
     return subprocess.run(command, cwd=root, capture_output=True, text=True, check=False)
 
 
-def worktree_check(root: Path) -> dict:
+def worktree_check(root: Path, expected_commit: str) -> dict:
     command = ["git", "status", "--porcelain", "--untracked-files=normal"]
     try:
         result = command_result(command, root)
-        code = result.returncode or (1 if result.stdout else 0)
+        head = command_result(["git", "rev-parse", "HEAD"], root)
+        code = (result.returncode or head.returncode or
+                (1 if result.stdout or head.stdout.strip() != expected_commit else 0))
     except OSError:
         code = 127
     return {
         "id": "worktree",
-        "command": "git status --porcelain --untracked-files=normal (before and after)",
+        "command": "git status --porcelain --untracked-files=normal and git rev-parse HEAD (before and after)",
         "status": "passed" if code == 0 else "failed",
         "exit_code": code,
     }
@@ -52,14 +54,14 @@ def generate(root: Path, output: Path, environ: dict[str, str] | None = None) ->
             raise ValueError("GITHUB_SHA does not match the checked-out commit")
         if env.get("GITHUB_REPOSITORY") and env["GITHUB_REPOSITORY"] != REPOSITORY:
             raise ValueError("GITHUB_REPOSITORY does not match AIFT-Runtime")
-        before = worktree_check(root)
+        before = worktree_check(root, commit)
         try:
             qa = subprocess.run(["bash", "qa-local.sh"], cwd=root, check=False)
             qa_code = qa.returncode
         except OSError as error:
             print(f"runtime QA could not execute: {error}", file=sys.stderr)
             qa_code = 127
-        after = worktree_check(root)
+        after = worktree_check(root, commit)
         worktree_code = before["exit_code"] or after["exit_code"]
         source = "github-actions" if env.get("GITHUB_ACTIONS") == "true" else "local"
         run_id = env.get("GITHUB_RUN_ID", "")
