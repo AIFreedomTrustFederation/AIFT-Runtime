@@ -68,6 +68,7 @@ PYTHONPYCACHEPREFIX="$cache_dir" python3 -m py_compile "${python_files[@]}"
 for file in "${json_files[@]}"; do
   python3 - "$file" <<'PY'
 import json
+import math
 import sys
 
 
@@ -80,8 +81,20 @@ def reject_duplicate_keys(pairs):
     return document
 
 
+def reject_nonfinite_constant(value):
+    raise ValueError(f"non-finite JSON number: {value}")
+
+
+def finite_float(value):
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError(f"non-finite JSON number: {value}")
+    return number
+
+
 with open(sys.argv[1], encoding="utf-8") as source:
-    json.load(source, object_pairs_hook=reject_duplicate_keys)
+    json.load(source, object_pairs_hook=reject_duplicate_keys,
+              parse_constant=reject_nonfinite_constant, parse_float=finite_float)
 PY
 done
 
