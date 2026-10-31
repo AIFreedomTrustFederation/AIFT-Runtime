@@ -67,6 +67,24 @@ class RuntimeVerificationRecordTests(unittest.TestCase):
         self.assertEqual(module.generate(self.repo, self.output, {}), 1)
         self.assertEqual(self.record()["checks"][1]["status"], "failed")
 
+    def test_qa_changes_head_without_dirty_worktree_fails_closed(self):
+        # A clean worktree is not sufficient: the evidence must describe
+        # the same commit before and after source QA.
+        script = ("#!/usr/bin/env bash\n"
+                  "git commit --allow-empty -qm changed-during-qa\n")
+        (self.repo / "qa-local.sh").write_text(script)
+        self.git("add", "qa-local.sh")
+        self.git("commit", "-qm", "fixture with moving head")
+        original = self.git("rev-parse", "HEAD").stdout.strip()
+        self.assertEqual(module.generate(self.repo, self.output, {}), 1)
+        record = self.record()
+        self.assertEqual(record["commit_sha"], original)
+        self.assertEqual(record["checks"][0]["status"], "passed")
+        self.assertEqual(record["checks"][1]["status"], "failed")
+        self.assertEqual(record["overall_status"], "failed")
+        self.assertNotEqual(self.git("rev-parse", "HEAD").stdout.strip(), original)
+        self.assertEqual(self.git("status", "--porcelain").stdout, "")
+
     def test_commit_mismatch_rejected_without_artifact(self):
         self.assertEqual(module.generate(self.repo, self.output, {"GITHUB_SHA": "0" * 40}), 2)
         self.assertFalse(self.output.exists())
