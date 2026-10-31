@@ -55,6 +55,14 @@ def generate(root: Path, output: Path, environ: dict[str, str] | None = None) ->
             raise ValueError("GITHUB_SHA does not match the checked-out commit")
         if env.get("GITHUB_REPOSITORY") and env["GITHUB_REPOSITORY"] != REPOSITORY:
             raise ValueError("GITHUB_REPOSITORY does not match AIFT-Runtime")
+        source = "github-actions" if env.get("GITHUB_ACTIONS") == "true" else "local"
+        run_id = env.get("GITHUB_RUN_ID", "")
+        if source == "github-actions" and (
+            env.get("GITHUB_SHA") != commit
+            or env.get("GITHUB_REPOSITORY") != REPOSITORY
+            or re.fullmatch(r"[1-9][0-9]*", run_id) is None
+        ):
+            raise ValueError("GitHub Actions evidence requires matching SHA, repository and run ID")
         before = worktree_check(root, commit)
         try:
             qa = subprocess.run(["bash", "qa-local.sh"], cwd=root, check=False)
@@ -64,10 +72,8 @@ def generate(root: Path, output: Path, environ: dict[str, str] | None = None) ->
             qa_code = 127
         after = worktree_check(root, commit)
         worktree_code = before["exit_code"] or after["exit_code"]
-        source = "github-actions" if env.get("GITHUB_ACTIONS") == "true" else "local"
-        run_id = env.get("GITHUB_RUN_ID", "")
         run_url = (f"https://github.com/{REPOSITORY}/actions/runs/{run_id}"
-                   if source == "github-actions" and run_id.isdecimal() else None)
+                   if source == "github-actions" else None)
         checks = [
             {"id": "runtime_source", "command": "bash qa-local.sh",
              "status": "passed" if qa_code == 0 else "failed", "exit_code": qa_code},

@@ -116,6 +116,35 @@ class RuntimeVerificationRecordTests(unittest.TestCase):
         self.assertEqual(module.generate(self.repo, self.output, {"GITHUB_REPOSITORY": "other/repo"}), 2)
         self.assertFalse(self.output.exists())
 
+    def test_actions_missing_identity_rejected_before_qa(self):
+        complete = {"GITHUB_ACTIONS": "true", "GITHUB_SHA": self.sha,
+                    "GITHUB_REPOSITORY": module.REPOSITORY, "GITHUB_RUN_ID": "12345"}
+        for key in ("GITHUB_SHA", "GITHUB_REPOSITORY", "GITHUB_RUN_ID"):
+            with self.subTest(missing=key):
+                env = {k: v for k, v in complete.items() if k != key}
+                self.assertEqual(module.generate(self.repo, self.output, env), 2)
+                self.assertFalse(self.output.exists())
+
+    def test_actions_invalid_run_id_rejected_before_qa(self):
+        for run_id in ("", "0", "00", "01", "-1", "123abc", " 123", "１２３"):
+            with self.subTest(run_id=run_id):
+                env = {"GITHUB_ACTIONS": "true", "GITHUB_SHA": self.sha,
+                       "GITHUB_REPOSITORY": module.REPOSITORY, "GITHUB_RUN_ID": run_id}
+                self.assertEqual(module.generate(self.repo, self.output, env), 2)
+                self.assertFalse(self.output.exists())
+
+    def test_actions_complete_identity_and_local_compatibility(self):
+        env = {"GITHUB_ACTIONS": "true", "GITHUB_SHA": self.sha,
+               "GITHUB_REPOSITORY": module.REPOSITORY, "GITHUB_RUN_ID": "12345"}
+        self.assertEqual(module.generate(self.repo, self.output, env), 0)
+        self.assertEqual(self.record()["source"], {
+            "type": "github-actions",
+            "run_url": f"https://github.com/{module.REPOSITORY}/actions/runs/12345",
+        })
+        self.output.unlink()
+        self.assertEqual(module.generate(self.repo, self.output, {}), 0)
+        self.assertEqual(self.record()["source"], {"type": "local", "run_url": None})
+
     def test_output_inside_checkout_rejected(self):
         self.assertEqual(module.generate(self.repo, self.repo / "evidence.json", {}), 2)
         self.assertFalse((self.repo / "evidence.json").exists())
