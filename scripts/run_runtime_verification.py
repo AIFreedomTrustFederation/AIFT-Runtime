@@ -10,6 +10,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -92,7 +93,20 @@ def generate(root: Path, output: Path, environ: dict[str, str] | None = None) ->
             ],
         }
         output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        staged_path = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=output.parent,
+                prefix=f".{output.name}.", suffix=".tmp", delete=False,
+            ) as staged:
+                staged_path = Path(staged.name)
+                staged.write(json.dumps(record, indent=2, sort_keys=True) + "\n")
+                staged.flush()
+                os.fsync(staged.fileno())
+            os.replace(staged_path, output)
+        finally:
+            if staged_path is not None:
+                staged_path.unlink(missing_ok=True)
         print(f"Verification evidence: {output} ({record['overall_status']})")
         return 0 if record["overall_status"] == "passed" else 1
     except (OSError, ValueError) as error:

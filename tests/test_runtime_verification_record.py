@@ -5,6 +5,7 @@ import json
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts/run_runtime_verification.py"
@@ -84,6 +85,28 @@ class RuntimeVerificationRecordTests(unittest.TestCase):
         self.assertEqual(record["overall_status"], "failed")
         self.assertNotEqual(self.git("rev-parse", "HEAD").stdout.strip(), original)
         self.assertEqual(self.git("status", "--porcelain").stdout, "")
+
+    def test_replace_failure_preserves_previous_evidence_and_cleans_stage(self):
+        original = b'{"previous": true}\n'
+        self.output.write_bytes(original)
+        with mock.patch.object(module.os, "replace", side_effect=OSError("simulated rename failure")):
+            self.assertEqual(module.generate(self.repo, self.output, {}), 2)
+        self.assertEqual(self.output.read_bytes(), original)
+        self.assertEqual(list(self.base.glob(".evidence.json.*.tmp")), [])
+
+    def test_sync_failure_preserves_previous_evidence_and_cleans_stage(self):
+        original = b'{"previous": true}\n'
+        self.output.write_bytes(original)
+        with mock.patch.object(module.os, "fsync", side_effect=OSError("simulated sync failure")):
+            self.assertEqual(module.generate(self.repo, self.output, {}), 2)
+        self.assertEqual(self.output.read_bytes(), original)
+        self.assertEqual(list(self.base.glob(".evidence.json.*.tmp")), [])
+
+    def test_success_replaces_previous_evidence_without_stage_files(self):
+        self.output.write_bytes(b'{"previous": true}\n')
+        self.assertEqual(module.generate(self.repo, self.output, {}), 0)
+        self.assertEqual(self.record()["commit_sha"], self.sha)
+        self.assertEqual(list(self.base.glob(".evidence.json.*.tmp")), [])
 
     def test_commit_mismatch_rejected_without_artifact(self):
         self.assertEqual(module.generate(self.repo, self.output, {"GITHUB_SHA": "0" * 40}), 2)
