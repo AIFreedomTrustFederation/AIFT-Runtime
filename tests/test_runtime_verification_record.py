@@ -68,14 +68,12 @@ class RuntimeVerificationRecordTests(unittest.TestCase):
         self.assertEqual(module.generate(self.repo, self.output, {}), 1)
         self.assertEqual(self.record()["checks"][1]["status"], "failed")
 
-    def test_qa_changes_head_without_dirty_worktree_fails_closed(self):
-        # A clean worktree is not sufficient: the evidence must describe
-        # the same commit before and after source QA.
+    def test_qa_moves_head_with_clean_worktree_fails_closed(self):
         script = ("#!/usr/bin/env bash\n"
-                  "git commit --allow-empty -qm changed-during-qa\n")
+                  "git commit --allow-empty -qm 'QA moved HEAD'\n")
         (self.repo / "qa-local.sh").write_text(script)
         self.git("add", "qa-local.sh")
-        self.git("commit", "-qm", "fixture with moving head")
+        self.git("commit", "-qm", "QA fixture")
         original = self.git("rev-parse", "HEAD").stdout.strip()
         self.assertEqual(module.generate(self.repo, self.output, {}), 1)
         record = self.record()
