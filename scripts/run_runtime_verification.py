@@ -10,6 +10,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,16 +21,18 @@ def command_result(command: list[str], root: Path) -> subprocess.CompletedProces
     return subprocess.run(command, cwd=root, capture_output=True, text=True, check=False)
 
 
-def worktree_check(root: Path) -> dict:
+def worktree_check(root: Path, expected_commit: str) -> dict:
     command = ["git", "status", "--porcelain", "--untracked-files=normal"]
     try:
         result = command_result(command, root)
-        code = result.returncode or (1 if result.stdout else 0)
+        head = command_result(["git", "rev-parse", "HEAD"], root)
+        code = (result.returncode or head.returncode or
+                (1 if result.stdout or head.stdout.strip() != expected_commit else 0))
     except OSError:
         code = 127
     return {
         "id": "worktree",
-        "command": "git status --porcelain --untracked-files=normal (before and after)",
+        "command": "git status --porcelain --untracked-files=normal and git rev-parse HEAD (before and after)",
         "status": "passed" if code == 0 else "failed",
         "exit_code": code,
     }
@@ -52,19 +55,25 @@ def generate(root: Path, output: Path, environ: dict[str, str] | None = None) ->
             raise ValueError("GITHUB_SHA does not match the checked-out commit")
         if env.get("GITHUB_REPOSITORY") and env["GITHUB_REPOSITORY"] != REPOSITORY:
             raise ValueError("GITHUB_REPOSITORY does not match AIFT-Runtime")
-        before = worktree_check(root)
+        source = "github-actions" if env.get("GITHUB_ACTIONS") == "true" else "local"
+        run_id = env.get("GITHUB_RUN_ID", "")
+        if source == "github-actions" and (
+            env.get("GITHUB_SHA") != commit
+            or env.get("GITHUB_REPOSITORY") != REPOSITORY
+            or re.fullmatch(r"[1-9][0-9]*", run_id) is None
+        ):
+            raise ValueError("GitHub Actions evidence requires matching SHA, repository and run ID")
+        before = worktree_check(root, commit)
         try:
             qa = subprocess.run(["bash", "qa-local.sh"], cwd=root, check=False)
             qa_code = qa.returncode
         except OSError as error:
             print(f"runtime QA could not execute: {error}", file=sys.stderr)
             qa_code = 127
-        after = worktree_check(root)
+        after = worktree_check(root, commit)
         worktree_code = before["exit_code"] or after["exit_code"]
-        source = "github-actions" if env.get("GITHUB_ACTIONS") == "true" else "local"
-        run_id = env.get("GITHUB_RUN_ID", "")
         run_url = (f"https://github.com/{REPOSITORY}/actions/runs/{run_id}"
-                   if source == "github-actions" and run_id.isdecimal() else None)
+                   if source == "github-actions" else None)
         checks = [
             {"id": "runtime_source", "command": "bash qa-local.sh",
              "status": "passed" if qa_code == 0 else "failed", "exit_code": qa_code},
@@ -90,7 +99,20 @@ def generate(root: Path, output: Path, environ: dict[str, str] | None = None) ->
             ],
         }
         output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        staged_path = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=output.parent,
+                prefix=f".{output.name}.", suffix=".tmp", delete=False,
+            ) as staged:
+                staged_path = Path(staged.name)
+                staged.write(json.dumps(record, indent=2, sort_keys=True) + "\n")
+                staged.flush()
+                os.fsync(staged.fileno())
+            os.replace(staged_path, output)
+        finally:
+            if staged_path is not None:
+                staged_path.unlink(missing_ok=True)
         print(f"Verification evidence: {output} ({record['overall_status']})")
         return 0 if record["overall_status"] == "passed" else 1
     except (OSError, ValueError) as error:
