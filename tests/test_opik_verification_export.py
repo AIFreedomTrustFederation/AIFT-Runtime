@@ -82,6 +82,45 @@ class OpikVerificationExportTests(unittest.TestCase):
             self.assertEqual(subprocess.run(command[:-1] + [str(Path(tmp) / "other.json")],
                                             capture_output=True).returncode, 2)
 
+    def test_missing_required_evidence_never_produces_a_payload(self):
+        variants = []
+        for key in evidence():
+            record = evidence()
+            del record[key]
+            variants.append((key, record))
+        for index in range(2):
+            for key in ("id", "exit_code", "status"):
+                record = evidence()
+                del record["checks"][index][key]
+                variants.append((f"checks[{index}].{key}", record))
+        for key in ("security", "dependencies", "deployment"):
+            record = evidence()
+            del record[key]["status"]
+            variants.append((f"{key}.status", record))
+        with tempfile.TemporaryDirectory() as tmp:
+            source, output = Path(tmp) / "evidence.json", Path(tmp) / "trace.json"
+            for label, record in variants:
+                with self.subTest(missing=label):
+                    with self.assertRaises(ValueError):
+                        module.trace_kwargs(record)
+                    source.write_text(json.dumps(record), encoding="utf-8")
+                    before = source.read_bytes()
+                    result = subprocess.run(
+                        [sys.executable, "-B", str(SCRIPT), str(source), "--output", str(output)],
+                        capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 2, result.stderr)
+                    self.assertEqual(result.stdout, "")
+                    self.assertFalse(output.exists())
+                    self.assertEqual(source.read_bytes(), before)
+
+    def test_check_order_does_not_change_known_answer(self):
+        for codes in ((0, 0), (0, 1), (7, 0), (-9, 127)):
+            with self.subTest(codes=codes):
+                record = evidence(*codes)
+                expected = module.trace_kwargs(record)
+                record["checks"].reverse()
+                self.assertEqual(module.trace_kwargs(record), expected)
+
 
 if __name__ == "__main__":
     unittest.main()
