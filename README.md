@@ -156,3 +156,9 @@ That is why runtime awareness is a constitutional feature as well as an engineer
 ### The Return of the Word
 
 In AIFT-Runtime, the Word returns as local truth made reportable. A request reaches the machine, the machine inspects itself, an approved command acts upon reality, verification tests the result, and the result returns with enough evidence to remain understandable. Intelligence becomes trustworthy because it stays close enough to the ground to know when it is wrong.
+
+## Engineering upgrade preparation
+
+See the [staged upgrade plan](docs/UPGRADE-PREPARATION.md) for the reviewed
+baseline, repository-specific verification gates, integration sequence and
+acceptance criteria. This plan does not certify current readiness.
