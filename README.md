@@ -162,3 +162,8 @@ In AIFT-Runtime, the Word returns as local truth made reportable. A request reac
 See the [staged upgrade plan](docs/UPGRADE-PREPARATION.md) for the reviewed
 baseline, repository-specific verification gates, integration sequence and
 acceptance criteria. This plan does not certify current readiness.
+
+
+## Proposed AIFT Universal OS Integration
+
+[Runtime role, interfaces and evidence gates](docs/aift-universal-os-alignment.md) describes the future native/hosted/embodied integration. This is a **design target**, not a claim that the runtime boots hardware or exposes production services. See the [architecture draft](https://github.com/AIFreedomTrustFederation/AIFT-OS/pull/92).
